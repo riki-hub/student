@@ -7,6 +7,7 @@ if (!isset($_SESSION['id_user'])) {
     header("Location: ../sign-in.php");
     exit;
 }
+
 // Proses hapus (lebih aman)
 if (isset($_GET['delete'])) {
     $id = (int)$_GET['delete'];
@@ -22,7 +23,6 @@ if (isset($_GET['msg'])) {
     if ($_GET['msg'] == 'updated') $alert = '<div class="alert alert-success">kelas berhasil diupdate!</div>';
     if ($_GET['msg'] == 'deleted') $alert = '<div class="alert alert-success">kelas berhasil dihapus!</div>';
 }
-
 
 // --- Pagination ---
 $limit = 10;
@@ -56,7 +56,70 @@ $query = mysqli_query($conn, "SELECT * FROM kelas ORDER BY id_kelas DESC LIMIT $
   <link href="../assets/css/material-dashboard.css?v=3.2.0" rel="stylesheet" />
 
   <style>
-    .table-actions .btn { padding: 0.35rem 0.65rem; font-size: 0.85rem; }
+    /* Tombol aksi di tabel */
+    .table-actions .btn {
+      padding: 0.35rem 1rem;
+      font-size: 0.875rem;
+      min-width: 80px;
+    }
+
+    /* Badge poin */
+    .poin-badge {
+      font-weight: bold;
+      font-size: 1.1em;
+      padding: 0.5em 1em;
+    }
+
+    /* === EFEK GELAP SAAT MODAL TERBUKA (Tambah & Edit) === */
+    body.modal-open {
+      overflow: hidden;
+    }
+
+    body.modal-open .sidenav {
+      filter: brightness(0.5);
+      transition: filter 0.3s ease;
+      pointer-events: none;
+    }
+
+    body.modal-open .main-content nav {
+      filter: brightness(0.65);
+      transition: filter 0.3s ease;
+    }
+
+    body.modal-open .card,
+    body.modal-open .table-responsive {
+      filter: brightness(0.85);
+      transition: filter 0.3s ease;
+    }
+
+    .modal-backdrop.show {
+      opacity: 0.75 !important;
+    }
+
+    /* === STYLING INPUT DI MODAL === */
+    .modal .form-control {
+      background-color: #ffffff;
+      border: 2px solid #d1d5db;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 14px;
+      color: #344767;
+      transition: all 0.2s ease;
+    }
+
+    .modal .form-control:hover {
+      border-color: #5e72e4;
+    }
+
+    .modal .form-control:focus {
+      border-color: #5e72e4;
+      box-shadow: 0 0 0 3px rgba(94, 114, 228, 0.15);
+      outline: none;
+    }
+
+    .modal .form-control::placeholder {
+      color: #9ca3af;
+    }
   </style>
 </head>
 
@@ -94,48 +157,31 @@ $query = mysqli_query($conn, "SELECT * FROM kelas ORDER BY id_kelas DESC LIMIT $
                   <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Aksi</th>
                 </tr>
               </thead>
-              <tbody>
+                            <tbody>
                 <?php
                 $no = $offset + 1;
+                // Variabel untuk mengumpulkan semua modal edit
+                $edit_modals = '';
+
                 while ($k = mysqli_fetch_assoc($query)):
-                ?>
-                  <tr>
-                    <td class="ps-4"><span class="text-secondary text-xs"><?= $no++ ?></span></td>
-                    <td><p class="text-xs font-weight-bold mb-0"><?= htmlspecialchars($k['nama_kelas']) ?></p></td>
-                    <td class="text-center table-actions py-3">
-    <!-- Tombol Edit -->
-    <button class="btn btn-warning btn-sm me-2 px-4" 
-            data-bs-toggle="modal" 
-            data-bs-target="#editKelas<?= $k['id_kelas'] ?>">
-        Edit
-    </button>
-
-    <!-- Tombol Hapus -->
-    <a href="?delete=<?= $k['id_kelas'] ?>&page=<?= $page ?>"
-       onclick="return confirm('Yakin menghapus kelas <?= htmlspecialchars($k['nama_kelas']) ?>?')"
-       class="btn btn-danger btn-sm px-4">
-        Hapus
-    </a>
-</td>
-                  </tr>
-
-                  <!-- Modal Edit Kelas -->
-                  <div class="modal fade" id="editKelas<?= $k['id_kelas'] ?>" tabindex="-1" aria-hidden="true">
+                  // Kumpulkan modal edit ke dalam string
+                  $edit_modals .= '
+                  <div class="modal fade" id="editKelas'. $k['id_kelas'] .'" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog">
                       <form method="POST" action="proses/edit_kelas.php">
                         <div class="modal-content">
                           <div class="modal-header">
                             <h5 class="modal-title">Edit Kelas</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                           </div>
                           <div class="modal-body">
-                            <input type="hidden" name="id_kelas" value="<?= $k['id_kelas'] ?>">
-                            <input type="hidden" name="page" value="<?= $page ?>">
+                            <input type="hidden" name="id_kelas" value="'. $k['id_kelas'] .'">
+                            <input type="hidden" name="page" value="'. $page .'">
 
                             <div class="mb-3">
                               <label class="form-label">Nama Kelas</label>
                               <input type="text" name="nama_kelas" class="form-control"
-                                     value="<?= htmlspecialchars($k['nama_kelas']) ?>" required>
+                                     value="'. htmlspecialchars($k['nama_kelas']) .'" required>
                             </div>
                           </div>
                           <div class="modal-footer">
@@ -147,7 +193,27 @@ $query = mysqli_query($conn, "SELECT * FROM kelas ORDER BY id_kelas DESC LIMIT $
                         </div>
                       </form>
                     </div>
-                  </div>
+                  </div>';
+                ?>
+                  <tr>
+                    <td class="ps-4"><span class="text-secondary text-xs"><?= $no++ ?></span></td>
+                    <td><p class="text-xs font-weight-bold mb-0"><?= htmlspecialchars($k['nama_kelas']) ?></p></td>
+                    <td class="text-center table-actions py-3">
+                      <!-- Tombol Edit -->
+                      <button class="btn btn-warning btn-sm me-2 px-4" 
+                              data-bs-toggle="modal" 
+                              data-bs-target="#editKelas<?= $k['id_kelas'] ?>">
+                        Edit
+                      </button>
+
+                      <!-- Tombol Hapus -->
+                      <a href="?delete=<?= $k['id_kelas'] ?>&page=<?= $page ?>"
+                         onclick="return confirm('Yakin menghapus kelas <?= htmlspecialchars($k['nama_kelas']) ?>?')"
+                         class="btn btn-danger btn-sm px-4">
+                        Hapus
+                      </a>
+                    </td>
+                  </tr>
                 <?php endwhile; ?>
               </tbody>
             </table>
@@ -182,9 +248,12 @@ $query = mysqli_query($conn, "SELECT * FROM kelas ORDER BY id_kelas DESC LIMIT $
                 </nav>
               </div>
             <?php endif; ?>
-          </div>
-        </div>
-      </div>
+          </div> <!-- end table-responsive -->
+        </div> <!-- end card-body -->
+      </div> <!-- end card -->
+
+      <!-- Cetak semua modal edit yang sudah dikumpulkan -->
+      <?= $edit_modals ?>
 
       <!-- Modal Tambah Kelas -->
       <div class="modal fade" id="tambahKelas" tabindex="-1" aria-labelledby="tambahKelasLabel" aria-hidden="true">
@@ -211,7 +280,7 @@ $query = mysqli_query($conn, "SELECT * FROM kelas ORDER BY id_kelas DESC LIMIT $
           </form>
         </div>
       </div>
-    </div>
+    </div> <!-- end container-fluid -->
   </main>
 
   <!-- Scripts -->

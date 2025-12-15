@@ -68,8 +68,70 @@ if (isset($_GET['msg'])) {
   <link href="../assets/css/material-dashboard.css?v=3.2.0" rel="stylesheet" />
 
   <style>
-    .table-actions .btn { padding: 0.35rem 0.65rem; font-size: 0.85rem; }
-    .poin-badge { font-weight: bold; font-size: 1.1em; }
+    /* Tombol aksi di tabel */
+    .table-actions .btn {
+      padding: 0.35rem 1rem;
+      font-size: 0.875rem;
+      min-width: 80px;
+    }
+
+    /* Badge poin */
+    .poin-badge {
+      font-weight: bold;
+      font-size: 1.1em;
+      padding: 0.5em 1em;
+    }
+
+    /* === EFEK GELAP SAAT MODAL TERBUKA (Tambah & Edit) === */
+    body.modal-open {
+      overflow: hidden;
+    }
+
+    body.modal-open .sidenav {
+      filter: brightness(0.5);
+      transition: filter 0.3s ease;
+      pointer-events: none;
+    }
+
+    body.modal-open .main-content nav {
+      filter: brightness(0.65);
+      transition: filter 0.3s ease;
+    }
+
+    body.modal-open .card,
+    body.modal-open .table-responsive {
+      filter: brightness(0.85);
+      transition: filter 0.3s ease;
+    }
+
+    .modal-backdrop.show {
+      opacity: 0.75 !important;
+    }
+
+    /* === STYLING INPUT DI MODAL === */
+    .modal .form-control {
+      background-color: #ffffff;
+      border: 2px solid #d1d5db;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 14px;
+      color: #344767;
+      transition: all 0.2s ease;
+    }
+
+    .modal .form-control:hover {
+      border-color: #5e72e4;
+    }
+
+    .modal .form-control:focus {
+      border-color: #5e72e4;
+      box-shadow: 0 0 0 3px rgba(94, 114, 228, 0.15);
+      outline: none;
+    }
+
+    .modal .form-control::placeholder {
+      color: #9ca3af;
+    }
   </style>
 </head>
 
@@ -107,9 +169,11 @@ if (isset($_GET['msg'])) {
                   <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Aksi</th>
                 </tr>
               </thead>
-              <tbody>
+                            <tbody>
                 <?php
                 $no = $offset + 1;
+                // Simpan ID untuk modal edit nanti
+                $edit_modals = '';
                 while ($j = mysqli_fetch_assoc($query)):
                 ?>
                   <tr>
@@ -118,58 +182,62 @@ if (isset($_GET['msg'])) {
                     <td class="text-center">
                       <span class="badge bg-gradient-danger poin-badge">-<?= number_format($j['poin']) ?></span>
                     </td>
-                   <td class="text-center table-actions py-3">
-    <!-- Tombol Edit -->
-    <button class="btn btn-warning btn-sm me-2 px-4" 
-            data-bs-toggle="modal" 
-            data-bs-target="#editJenis<?= $j['id_jenis'] ?>">
-        Edit
-    </button>
+                    <td class="text-center table-actions py-3">
+                      <!-- Tombol Edit -->
+                      <button class="btn btn-warning btn-sm me-2 px-4" 
+                              data-bs-toggle="modal" 
+                              data-bs-target="#editJenis<?= $j['id_jenis'] ?>">
+                          Edit
+                      </button>
 
-    <!-- Tombol Hapus -->
-    <a href="?delete=<?= $j['id_jenis'] ?>&page=<?= $page ?>"
-       onclick="return confirm('Yakin menghapus jenis pelanggaran \"<?= htmlspecialchars($j['nama_pelanggaran']) ?>\"?')"
-       class="btn btn-danger btn-sm px-4">
-        Hapus
-    </a>
-</td>
+                      <!-- Tombol Hapus -->
+                      <a href="?delete=<?= $j['id_jenis'] ?>&page=<?= $page ?>"
+                         onclick="return confirm('Yakin menghapus jenis pelanggaran \"<?= htmlspecialchars($j['nama_pelanggaran']) ?>\"?')"
+                         class="btn btn-danger btn-sm px-4">
+                          Hapus
+                      </a>
+                    </td>
                   </tr>
 
-                  <!-- Modal Edit Jenis Pelanggaran -->
-                  <div class="modal fade" id="editJenis<?= $j['id_jenis'] ?>" tabindex="-1" aria-hidden="true">
+                  <?php
+                  // Simpan modal edit ke variabel (akan ditampilkan nanti di luar tabel)
+                  $edit_modals .= '
+                  <div class="modal fade" id="editJenis'. $j['id_jenis'] .'" tabindex="-1" aria-labelledby="editJenisLabel'. $j['id_jenis'] .'" aria-hidden="true">
                     <div class="modal-dialog">
                       <form method="POST" action="proses/edit_jenis.php">
                         <div class="modal-content">
                           <div class="modal-header">
-                            <h5 class="modal-title">Edit Jenis Pelanggaran</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            <h5 class="modal-title" id="editJenisLabel'. $j['id_jenis'] .'">Edit Jenis Pelanggaran</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                           </div>
                           <div class="modal-body">
-                            <input type="hidden" name="id_jenis" value="<?= $j['id_jenis'] ?>">
-                            <input type="hidden" name="page" value="<?= $page ?>">
+                            <input type="hidden" name="id_jenis" value="'. $j['id_jenis'] .'">
+                            <input type="hidden" name="page" value="'. $page .'">
 
                             <div class="mb-3">
                               <label class="form-label">Nama Pelanggaran</label>
                               <input type="text" name="nama_pelanggaran" class="form-control"
-                                     value="<?= htmlspecialchars($j['nama_pelanggaran']) ?>" required>
+                                     value="'. htmlspecialchars($j['nama_pelanggaran']) .'" required>
                             </div>
 
                             <div class="mb-3">
                               <label class="form-label">Poin Pengurangan</label>
                               <input type="number" name="poin" class="form-control"
-                                     value="<?= $j['poin'] ?>" min="1" required>
+                                     value="'. $j['poin'] .'" min="1" required>
                             </div>
                           </div>
                           <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
                             <button type="submit" name="edit" class="btn btn-success">
-                              <i class="fas fa-save me-2"></i> Update
+                              Update
                             </button>
                           </div>
                         </div>
                       </form>
                     </div>
-                  </div>
+                  </div>';
+                  ?>
+
                 <?php endwhile; ?>
               </tbody>
             </table>
@@ -198,7 +266,10 @@ if (isset($_GET['msg'])) {
         </div>
       </div>
 
-      <!-- Modal Tambah Jenis Pelanggaran -->
+      <!-- Semua Modal Edit diletakkan di sini, di luar tabel -->
+      <?= $edit_modals ?>
+
+      <!-- Modal Tambah Jenis Pelanggaran (sudah benar posisinya) -->
       <div class="modal fade" id="tambahJenis" tabindex="-1" aria-labelledby="tambahJenisLabel" aria-hidden="true">
         <div class="modal-dialog">
           <form method="POST" action="proses/tambah_jenis.php">
@@ -221,7 +292,7 @@ if (isset($_GET['msg'])) {
               <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
                 <button type="submit" name="tambah" class="btn btn-success">
-                  <i class="fas fa-save me-2"></i> Simpan
+                  Simpan
                 </button>
               </div>
             </div>

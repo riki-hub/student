@@ -35,8 +35,9 @@ $query = mysqli_query($conn, "
     LIMIT $limit OFFSET $offset
 ");
 
-// Ambil semua kelas untuk select
-$kelas_options = mysqli_query($conn, "SELECT * FROM kelas ORDER BY nama_kelas");
+// Ambil semua kelas sekali untuk digunakan di modal tambah & edit
+$kelas_result = mysqli_query($conn, "SELECT * FROM kelas ORDER BY nama_kelas");
+$all_kelas = mysqli_fetch_all($kelas_result, MYSQLI_ASSOC);
 
 // Alert feedback
 $alert = '';
@@ -60,41 +61,88 @@ if (isset($_GET['msg'])) {
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Master Siswa - Material Dashboard</title>
 
-  <!-- Fonts & Icons -->
   <link href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700,900" rel="stylesheet" />
   <link href="../assets/css/nucleo-icons.css" rel="stylesheet" />
   <link href="../assets/css/nucleo-svg.css" rel="stylesheet" />
   <script src="https://kit.fontawesome.com/42d5adcbca.js" crossorigin="anonymous"></script>
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" rel="stylesheet" />
-
-  <!-- Material Dashboard CSS -->
   <link href="../assets/css/material-dashboard.css?v=3.2.0" rel="stylesheet" />
 
-  <style>
+ <style>
+    /* Tombol aksi di tabel */
     .table-actions .btn {
-      padding: 0.35rem 0.65rem;
-      font-size: 0.85rem;
+      padding: 0.35rem 1rem;
+      font-size: 0.875rem;
+      min-width: 80px;
     }
 
-    .badge-status-aktif {
-      background: linear-gradient(195deg, #66BB6A, #43A047);
+    /* Badge poin */
+    .poin-badge {
+      font-weight: bold;
+      font-size: 1.1em;
+      padding: 0.5em 1em;
     }
 
-    .badge-status-nonaktif {
-      background: linear-gradient(195deg, #EF5350, #E53935);
+    /* === EFEK GELAP SAAT MODAL TERBUKA (Tambah & Edit) === */
+    body.modal-open {
+      overflow: hidden;
+    }
+
+    body.modal-open .sidenav {
+      filter: brightness(0.5);
+      transition: filter 0.3s ease;
+      pointer-events: none;
+    }
+
+    body.modal-open .main-content nav {
+      filter: brightness(0.65);
+      transition: filter 0.3s ease;
+    }
+
+    body.modal-open .card,
+    body.modal-open .table-responsive {
+      filter: brightness(0.85);
+      transition: filter 0.3s ease;
+    }
+
+    .modal-backdrop.show {
+      opacity: 0.75 !important;
+    }
+
+    /* === STYLING INPUT DI MODAL === */
+    .modal .form-control {
+      background-color: #ffffff;
+      border: 2px solid #d1d5db;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 14px;
+      color: #344767;
+      transition: all 0.2s ease;
+    }
+
+    .modal .form-control:hover {
+      border-color: #5e72e4;
+    }
+
+    .modal .form-control:focus {
+      border-color: #5e72e4;
+      box-shadow: 0 0 0 3px rgba(94, 114, 228, 0.15);
+      outline: none;
+    }
+
+    .modal .form-control::placeholder {
+      color: #9ca3af;
     }
   </style>
 </head>
 
 <body class="g-sidenav-show bg-gray-100">
   <?php include "sidebar.php"; ?>
-
   <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
     <?php include "nav.php"; ?>
 
@@ -134,110 +182,76 @@ if (isset($_GET['msg'])) {
               <tbody>
                 <?php
                 $no = $offset + 1;
+                $edit_modals = ''; // Kumpulkan semua modal edit di sini
+
                 while ($s = mysqli_fetch_assoc($query)):
                   $jk = $s['jenis_kelamin'] == 'L' ? 'Laki-laki' : 'Perempuan';
                   $tgl_lahir = date('d-m-Y', strtotime($s['tanggal_lahir']));
                   $status_badge = $s['status'] == 'aktif' ? 'aktif' : 'nonaktif';
-                ?>
-                  <tr>
-                    <td class="ps-4"><span class="text-secondary text-xs"><?= $no++ ?></span></td>
-                    <td>
-                      <p class="text-xs font-weight-bold mb-0"><?= htmlspecialchars($s['nis']) ?></p>
-                    </td>
-                    <td>
-                      <p class="text-xs font-weight-bold mb-0"><?= htmlspecialchars($s['nama_siswa']) ?></p>
-                    </td>
-                    <td><span class="text-xs"><?= $jk ?></span></td>
-                    <td><span class="text-xs"><?= $tgl_lahir ?></span></td>
-                    <td><span class="text-xs"><?= htmlspecialchars($s['nama_kelas'] ?? '-') ?></span></td>
-                    <td><span class="text-xs font-weight-bold"><?= number_format($s['poin_sisa']) ?></span></td>
-                    <td>
-                      <span class="badge badge-sm badge-status-<?= $status_badge ?>">
-                        <?= ucfirst($s['status']) ?>
-                      </span>
-                    </td>
-                    <td class="text-center table-actions py-3">
-                      <!-- Tombol Edit -->
-                      <button class="btn btn-warning btn-sm me-2 px-3"
-                        data-bs-toggle="modal"
-                        data-bs-target="#editSiswa<?= $s['id_siswa'] ?>">
-                        Edit
-                      </button>
 
-                      <!-- Tombol Hapus -->
-                      <a href="?delete=<?= $s['id_siswa'] ?>&page=<?= $page ?>"
-                        onclick="return confirm('Yakin menghapus siswa <?= htmlspecialchars($s['nama_siswa']) ?>?')"
-                        class="btn btn-danger btn-sm px-3">
-                        Hapus
-                      </a>
-                    </td>
-                  </tr>
-
-                  <!-- Modal Edit Siswa (Password TIDAK di-hash) -->
-                  <div class="modal fade" id="editSiswa<?= $s['id_siswa'] ?>" tabindex="-1">
+                  // Bangun modal edit
+                  $edit_modals .= '
+                  <div class="modal fade" id="editSiswa'. $s['id_siswa'] .'" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog modal-lg">
                       <form method="POST" action="proses/edit_siswa.php">
                         <div class="modal-content">
                           <div class="modal-header">
-                            <h5 class="modal-title">Edit Siswa - <?= htmlspecialchars($s['nama_siswa']) ?></h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            <h5 class="modal-title">Edit Siswa - '. htmlspecialchars($s['nama_siswa']) .'</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                           </div>
                           <div class="modal-body">
-                            <input type="hidden" name="id_siswa" value="<?= $s['id_siswa'] ?>">
-                            <input type="hidden" name="page" value="<?= $page ?>">
+                            <input type="hidden" name="id_siswa" value="'. $s['id_siswa'] .'">
+                            <input type="hidden" name="page" value="'. $page .'">
 
                             <div class="row">
                               <div class="col-md-6 mb-3">
                                 <label class="form-label">NIS</label>
-                                <input type="text" name="nis" class="form-control" value="<?= htmlspecialchars($s['nis']) ?>" required>
+                                <input type="text" name="nis" class="form-control" value="'. htmlspecialchars($s['nis']) .'" required>
                               </div>
                               <div class="col-md-6 mb-3">
                                 <label class="form-label">Nama Siswa</label>
-                                <input type="text" name="nama_siswa" class="form-control" value="<?= htmlspecialchars($s['nama_siswa']) ?>" required>
+                                <input type="text" name="nama_siswa" class="form-control" value="'. htmlspecialchars($s['nama_siswa']) .'" required>
                               </div>
                               <div class="col-md-6 mb-3">
                                 <label class="form-label">Jenis Kelamin</label>
                                 <select name="jenis_kelamin" class="form-select" required>
-                                  <option value="L" <?= $s['jenis_kelamin'] == 'L' ? 'selected' : '' ?>>Laki-laki</option>
-                                  <option value="P" <?= $s['jenis_kelamin'] == 'P' ? 'selected' : '' ?>>Perempuan</option>
+                                  <option value="L" '. ($s['jenis_kelamin'] == 'L' ? 'selected' : '') .'>Laki-laki</option>
+                                  <option value="P" '. ($s['jenis_kelamin'] == 'P' ? 'selected' : '') .'>Perempuan</option>
                                 </select>
                               </div>
                               <div class="col-md-6 mb-3">
                                 <label class="form-label">Tanggal Lahir</label>
-                                <input type="date" name="tanggal_lahir" class="form-control" value="<?= $s['tanggal_lahir'] ?>" required>
+                                <input type="date" name="tanggal_lahir" class="form-control" value="'. $s['tanggal_lahir'] .'" required>
                               </div>
                               <div class="col-md-6 mb-3">
                                 <label class="form-label">Kelas</label>
                                 <select name="id_kelas" class="form-select">
-                                  <option value="">-- Tanpa Kelas --</option>
-                                  <?php
-                                  mysqli_data_seek($kelas_options, 0);
-                                  while ($k = mysqli_fetch_assoc($kelas_options)):
-                                  ?>
-                                    <option value="<?= $k['id_kelas'] ?>" <?= $s['id_kelas'] == $k['id_kelas'] ? 'selected' : '' ?>>
-                                      <?= htmlspecialchars($k['nama_kelas']) ?>
-                                    </option>
-                                  <?php endwhile; ?>
+                                  <option value="">-- Tanpa Kelas --</option>';
+                                  foreach ($all_kelas as $k) {
+                                    $selected = $s['id_kelas'] == $k['id_kelas'] ? 'selected' : '';
+                                    $edit_modals .= '<option value="'. $k['id_kelas'] .'" '. $selected .'>'. htmlspecialchars($k['nama_kelas']) .'</option>';
+                                  }
+                  $edit_modals .= '
                                 </select>
                               </div>
                               <div class="col-md-6 mb-3">
                                 <label class="form-label">Poin Awal</label>
-                                <input type="number" name="poin_awal" class="form-control" value="<?= $s['poin_awal'] ?>" min="0" required>
+                                <input type="number" name="poin_awal" class="form-control" value="'. $s['poin_awal'] .'" min="0" required>
                               </div>
                               <div class="col-md-6 mb-3">
                                 <label class="form-label">Poin Sisa</label>
-                                <input type="number" name="poin_sisa" class="form-control" value="<?= $s['poin_sisa'] ?>" min="0" required>
+                                <input type="number" name="poin_sisa" class="form-control" value="'. $s['poin_sisa'] .'" min="0" required>
                               </div>
                               <div class="col-md-6 mb-3">
                                 <label class="form-label">Status</label>
                                 <select name="status" class="form-select" required>
-                                  <option value="aktif" <?= $s['status'] == 'aktif' ? 'selected' : '' ?>>Aktif</option>
-                                  <option value="nonaktif" <?= $s['status'] == 'nonaktif' ? 'selected' : '' ?>>Nonaktif</option>
+                                  <option value="aktif" '. ($s['status'] == 'aktif' ? 'selected' : '') .'>Aktif</option>
+                                  <option value="nonaktif" '. ($s['status'] == 'nonaktif' ? 'selected' : '') .'>Nonaktif</option>
                                 </select>
                               </div>
                               <div class="col-md-6 mb-3">
-                                <label class="form-label">Password Baru <small class="text-muted">(Kosongkan jika tidak ingin ubah)</small></label>
-                                <input type="text" name="password" class="form-control" placeholder="Masukkan password baru (plain text)">
+                                <label class="form-label">Password Baru <small class="text-muted">(Kosongkan jika tidak ubah)</small></label>
+                                <input type="text" name="password" class="form-control" placeholder="Password baru">
                               </div>
                             </div>
                           </div>
@@ -250,7 +264,24 @@ if (isset($_GET['msg'])) {
                         </div>
                       </form>
                     </div>
-                  </div>
+                  </div>';
+                ?>
+                  <tr>
+                    <td class="ps-4"><span class="text-secondary text-xs"><?= $no++ ?></span></td>
+                    <td><p class="text-xs font-weight-bold mb-0"><?= htmlspecialchars($s['nis']) ?></p></td>
+                    <td><p class="text-xs font-weight-bold mb-0"><?= htmlspecialchars($s['nama_siswa']) ?></p></td>
+                    <td><span class="text-xs"><?= $jk ?></span></td>
+                    <td><span class="text-xs"><?= $tgl_lahir ?></span></td>
+                    <td><span class="text-xs"><?= htmlspecialchars($s['nama_kelas'] ?? '-') ?></span></td>
+                    <td><span class="text-xs font-weight-bold"><?= number_format($s['poin_sisa']) ?></span></td>
+                    <td><span class="badge badge-sm badge-status-<?= $status_badge ?>"><?= ucfirst($s['status']) ?></span></td>
+                    <td class="text-center table-actions py-3">
+                      <button class="btn btn-warning btn-sm me-2 px-3" data-bs-toggle="modal" data-bs-target="#editSiswa<?= $s['id_siswa'] ?>">Edit</button>
+                      <a href="?delete=<?= $s['id_siswa'] ?>&page=<?= $page ?>" 
+                         onclick="return confirm('Yakin menghapus siswa <?= htmlspecialchars($s['nama_siswa']) ?>?')"
+                         class="btn btn-danger btn-sm px-3">Hapus</a>
+                    </td>
+                  </tr>
                 <?php endwhile; ?>
               </tbody>
             </table>
@@ -279,14 +310,17 @@ if (isset($_GET['msg'])) {
         </div>
       </div>
 
-      <!-- Modal Tambah Siswa (Password TIDAK di-hash) -->
-      <div class="modal fade" id="tambahSiswa" tabindex="-1">
+      <!-- Semua Modal Edit Siswa -->
+      <?= $edit_modals ?>
+
+      <!-- Modal Tambah Siswa -->
+      <div class="modal fade" id="tambahSiswa" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
           <form method="POST" action="proses/tambah_siswa.php">
             <div class="modal-content">
               <div class="modal-header">
                 <h5 class="modal-title">Tambah Siswa Baru</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
               <div class="modal-body">
                 <div class="row">
@@ -317,12 +351,9 @@ if (isset($_GET['msg'])) {
                     <label class="form-label">Kelas</label>
                     <select name="id_kelas" class="form-select">
                       <option value="">-- Tanpa Kelas --</option>
-                      <?php
-                      mysqli_data_seek($kelas_options, 0);
-                      while ($k = mysqli_fetch_assoc($kelas_options)):
-                      ?>
+                      <?php foreach ($all_kelas as $k): ?>
                         <option value="<?= $k['id_kelas'] ?>"><?= htmlspecialchars($k['nama_kelas']) ?></option>
-                      <?php endwhile; ?>
+                      <?php endforeach; ?>
                     </select>
                   </div>
                   <div class="col-md-6 mb-3">
@@ -330,7 +361,7 @@ if (isset($_GET['msg'])) {
                     <input type="number" name="poin_awal" class="form-control" value="100" min="0" required>
                   </div>
                   <div class="col-md-6 mb-3">
-                    <label class="form-label">Poin Sisa (otomatis sama dengan poin awal)</label>
+                    <label class="form-label">Poin Sisa</label>
                     <input type="number" name="poin_sisa" class="form-control" value="100" min="0" required>
                   </div>
                   <div class="col-md-6 mb-3">
@@ -355,11 +386,9 @@ if (isset($_GET['msg'])) {
     </div>
   </main>
 
-  <!-- Scripts -->
   <script src="../assets/js/core/popper.min.js"></script>
   <script src="../assets/js/core/bootstrap.min.js"></script>
   <script src="../assets/js/plugins/perfect-scrollbar.min.js"></script>
   <script src="../assets/js/material-dashboard.min.js?v=3.2.0"></script>
 </body>
-
 </html>

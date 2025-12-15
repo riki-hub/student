@@ -68,20 +68,70 @@ if (isset($_GET['msg'])) {
   <!-- Material Dashboard CSS -->
   <link href="../assets/css/material-dashboard.css?v=3.2.0" rel="stylesheet" />
 
-  <style>
+   <style>
+    /* Tombol aksi di tabel */
     .table-actions .btn {
-      padding: 0.35rem 0.65rem;
-      font-size: 0.85rem;
-    }
-
-    .deskripsi-text {
+      padding: 0.35rem 1rem;
       font-size: 0.875rem;
-      color: #6c757d;
+      min-width: 80px;
     }
 
-    .batas-poin-badge {
+    /* Badge poin */
+    .poin-badge {
       font-weight: bold;
       font-size: 1.1em;
+      padding: 0.5em 1em;
+    }
+
+    /* === EFEK GELAP SAAT MODAL TERBUKA (Tambah & Edit) === */
+    body.modal-open {
+      overflow: hidden;
+    }
+
+    body.modal-open .sidenav {
+      filter: brightness(0.5);
+      transition: filter 0.3s ease;
+      pointer-events: none;
+    }
+
+    body.modal-open .main-content nav {
+      filter: brightness(0.65);
+      transition: filter 0.3s ease;
+    }
+
+    body.modal-open .card,
+    body.modal-open .table-responsive {
+      filter: brightness(0.85);
+      transition: filter 0.3s ease;
+    }
+
+    .modal-backdrop.show {
+      opacity: 0.75 !important;
+    }
+
+    /* === STYLING INPUT DI MODAL === */
+    .modal .form-control {
+      background-color: #ffffff;
+      border: 2px solid #d1d5db;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 14px;
+      color: #344767;
+      transition: all 0.2s ease;
+    }
+
+    .modal .form-control:hover {
+      border-color: #5e72e4;
+    }
+
+    .modal .form-control:focus {
+      border-color: #5e72e4;
+      box-shadow: 0 0 0 3px rgba(94, 114, 228, 0.15);
+      outline: none;
+    }
+
+    .modal .form-control::placeholder {
+      color: #9ca3af;
     }
   </style>
 </head>
@@ -121,9 +171,11 @@ if (isset($_GET['msg'])) {
                   <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Aksi</th>
                 </tr>
               </thead>
-              <tbody>
+                           <tbody>
                 <?php
                 $no = $offset + 1;
+                // Variabel untuk menampung semua modal edit
+                $edit_modals = '';
                 while ($s = mysqli_fetch_assoc($query)):
                 ?>
                   <tr>
@@ -149,53 +201,57 @@ if (isset($_GET['msg'])) {
 
                       <!-- Tombol Hapus -->
                       <a href="?delete=<?= $s['id_sanksi'] ?>&page=<?= $page ?>"
-                        onclick="return confirm('Yakin menghapus sanksi \" <?= htmlspecialchars($s['nama_sanksi']) ?>\"?')"
+                        onclick="return confirm('Yakin menghapus sanksi \"<?= htmlspecialchars($s['nama_sanksi']) ?>\"?')"
                         class="btn btn-danger btn-sm px-4">
                         Hapus
                       </a>
                     </td>
                   </tr>
 
-                  <!-- Modal Edit Sanksi -->
-                  <div class="modal fade" id="editSanksi<?= $s['id_sanksi'] ?>" tabindex="-1" aria-hidden="true">
+                  <?php
+                  // Kumpulkan modal edit ke dalam variabel
+                  $edit_modals .= '
+                  <div class="modal fade" id="editSanksi'. $s['id_sanksi'] .'" tabindex="-1" aria-labelledby="editSanksiLabel'. $s['id_sanksi'] .'" aria-hidden="true">
                     <div class="modal-dialog modal-lg">
                       <form method="POST" action="proses/edit_sanksi.php">
                         <div class="modal-content">
                           <div class="modal-header">
-                            <h5 class="modal-title">Edit Sanksi</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            <h5 class="modal-title" id="editSanksiLabel'. $s['id_sanksi'] .'">Edit Sanksi</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                           </div>
                           <div class="modal-body">
-                            <input type="hidden" name="id_sanksi" value="<?= $s['id_sanksi'] ?>">
-                            <input type="hidden" name="page" value="<?= $page ?>">
+                            <input type="hidden" name="id_sanksi" value="'. $s['id_sanksi'] .'">
+                            <input type="hidden" name="page" value="'. $page .'">
 
                             <div class="row">
                               <div class="col-md-6 mb-3">
                                 <label class="form-label">Nama Sanksi</label>
                                 <input type="text" name="nama_sanksi" class="form-control"
-                                  value="<?= htmlspecialchars($s['nama_sanksi']) ?>" required>
+                                  value="'. htmlspecialchars($s['nama_sanksi']) .'" required>
                               </div>
                               <div class="col-md-6 mb-3">
                                 <label class="form-label">Batas Poin <small class="text-muted">(minimal poin untuk sanksi ini)</small></label>
                                 <input type="number" name="batas_poin" class="form-control"
-                                  value="<?= $s['batas_poin'] ?>" min="0" required>
+                                  value="'. $s['batas_poin'] .'" min="0" required>
                               </div>
                               <div class="col-12 mb-3">
                                 <label class="form-label">Deskripsi Sanksi</label>
-                                <textarea name="deskripsi" class="form-control" rows="4" required><?= htmlspecialchars($s['deskripsi']) ?></textarea>
+                                <textarea name="deskripsi" class="form-control" rows="4" required>'. htmlspecialchars($s['deskripsi']) .'</textarea>
                               </div>
                             </div>
                           </div>
                           <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
                             <button type="submit" name="edit" class="btn btn-success">
-                              <i class="fas fa-save me-2"></i> Update
+                              Update
                             </button>
                           </div>
                         </div>
                       </form>
                     </div>
-                  </div>
+                  </div>';
+                  ?>
+
                 <?php endwhile; ?>
               </tbody>
             </table>
@@ -224,7 +280,10 @@ if (isset($_GET['msg'])) {
         </div>
       </div>
 
-      <!-- Modal Tambah Sanksi -->
+      <!-- Tempatkan semua Modal Edit di sini (di luar tabel) -->
+      <?= $edit_modals ?>
+
+      <!-- Modal Tambah Sanksi (sudah benar posisinya) -->
       <div class="modal fade" id="tambahSanksi" tabindex="-1" aria-labelledby="tambahSanksiLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
           <form method="POST" action="proses/tambah_sanksi.php">
@@ -254,7 +313,7 @@ if (isset($_GET['msg'])) {
               <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
                 <button type="submit" name="tambah" class="btn btn-success">
-                  <i class="fas fa-save me-2"></i> Simpan
+                  Simpan
                 </button>
               </div>
             </div>
@@ -272,3 +331,6 @@ if (isset($_GET['msg'])) {
 </body>
 
 </html>
+
+
+

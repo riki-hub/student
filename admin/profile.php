@@ -2,7 +2,7 @@
 require '../koneksi.php';
 session_start();
 
-// Cek login (opsional, tambahkan jika belum ada)
+// Cek login
 if (!isset($_SESSION['id_user'])) {
     header("Location: ../sign-in.php");
     exit;
@@ -11,6 +11,12 @@ if (!isset($_SESSION['id_user'])) {
 // Proses hapus (lebih aman)
 if (isset($_GET['delete'])) {
     $id = (int)$_GET['delete'];
+    // Hindari hapus user sendiri atau user terakhir (opsional, bisa dihapus jika tidak perlu)
+    $current_id = $_SESSION['id_user'];
+    if ($id == $current_id) {
+        header("Location: profile.php?msg=error_self");
+        exit;
+    }
     mysqli_query($conn, "DELETE FROM users WHERE id_user = $id");
     header("Location: profile.php?msg=deleted");
     exit;
@@ -19,10 +25,24 @@ if (isset($_GET['delete'])) {
 // Pesan feedback
 $alert = '';
 if (isset($_GET['msg'])) {
-    if ($_GET['msg'] == 'added') $alert = '<div class="alert alert-success">User berhasil ditambahkan!</div>';
-    if ($_GET['msg'] == 'updated') $alert = '<div class="alert alert-success">User berhasil diupdate!</div>';
-    if ($_GET['msg'] == 'deleted') $alert = '<div class="alert alert-success">User berhasil dihapus!</div>';
+    $messages = [
+        'added'   => 'User berhasil ditambahkan!',
+        'updated' => 'User berhasil diupdate!',
+        'deleted' => 'User berhasil dihapus!',
+        'error_self' => 'Tidak dapat menghapus akun sendiri!'
+    ];
+    $type = $_GET['msg'];
+    $alertClass = ($type === 'error_self') ? 'danger' : 'success';
+    if (isset($messages[$type])) {
+        $alert = "<div class='alert alert-$alertClass alert-dismissible fade show' role='alert'>
+                        {$messages[$type]}
+                        <button type='button' class='btn-close' data-bs-dismiss='alert'></button>
+                      </div>";
+    }
 }
+
+// Ambil semua data user
+$query = mysqli_query($conn, "SELECT * FROM users ORDER BY id_user DESC");
 ?>
 
 <!DOCTYPE html>
@@ -41,6 +61,73 @@ if (isset($_GET['msg'])) {
 
   <!-- Material Dashboard CSS -->
   <link href="../assets/css/material-dashboard.css?v=3.2.0" rel="stylesheet" />
+
+ <style>
+    /* Tombol aksi di tabel */
+    .table-actions .btn {
+      padding: 0.35rem 1rem;
+      font-size: 0.875rem;
+      min-width: 80px;
+    }
+
+    /* Badge poin */
+    .poin-badge {
+      font-weight: bold;
+      font-size: 1.1em;
+      padding: 0.5em 1em;
+    }
+
+    /* === EFEK GELAP SAAT MODAL TERBUKA (Tambah & Edit) === */
+    body.modal-open {
+      overflow: hidden;
+    }
+
+    body.modal-open .sidenav {
+      filter: brightness(0.5);
+      transition: filter 0.3s ease;
+      pointer-events: none;
+    }
+
+    body.modal-open .main-content nav {
+      filter: brightness(0.65);
+      transition: filter 0.3s ease;
+    }
+
+    body.modal-open .card,
+    body.modal-open .table-responsive {
+      filter: brightness(0.85);
+      transition: filter 0.3s ease;
+    }
+
+    .modal-backdrop.show {
+      opacity: 0.75 !important;
+    }
+
+    /* === STYLING INPUT DI MODAL === */
+    .modal .form-control {
+      background-color: #ffffff;
+      border: 2px solid #d1d5db;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 14px;
+      color: #344767;
+      transition: all 0.2s ease;
+    }
+
+    .modal .form-control:hover {
+      border-color: #5e72e4;
+    }
+
+    .modal .form-control:focus {
+      border-color: #5e72e4;
+      box-shadow: 0 0 0 3px rgba(94, 114, 228, 0.15);
+      outline: none;
+    }
+
+    .modal .form-control::placeholder {
+      color: #9ca3af;
+    }
+  </style>
 </head>
 
 <body class="g-sidenav-show bg-gray-100">
@@ -76,83 +163,88 @@ if (isset($_GET['msg'])) {
                   <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Username</th>
                   <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Nama Lengkap</th>
                   <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Role</th>
-                  <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-center">Aksi</th>
+                  <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Aksi</th>
                 </tr>
               </thead>
               <tbody>
                 <?php
                 $no = 1;
-                $query = mysqli_query($conn, "SELECT * FROM users ORDER BY id_user DESC");
+                $edit_modals = ''; // Kumpulkan semua modal edit di sini
+
                 while ($u = mysqli_fetch_assoc($query)):
-                ?>
-                  <tr>
-                    <td class="ps-4"><span class="text-secondary text-xs"><?= $no++ ?></span></td>
-                    <td><p class="text-xs font-weight-bold mb-0"><?= htmlspecialchars($u['username']) ?></p></td>
-                    <td><p class="text-xs font-weight-bold mb-0"><?= htmlspecialchars($u['nama_lengkap']) ?></p></td>
-                    <td><span class="badge badge-sm bg-gradient-<?= $u['role'] == 'admin' ? 'danger' : ($u['role'] == 'guru' ? 'info' : 'secondary') ?>">
-                      <?= ucfirst($u['role']) ?>
-                    </span></td>
-                    <td class="text-center table-actions py-3">
-    <!-- Tombol Edit -->
-    <button class="btn btn-warning btn-sm me-2 px-4" 
-            data-bs-toggle="modal" 
-            data-bs-target="#editUser<?= $u['id_user'] ?>">
-        Edit
-    </button>
+                  // Tentukan warna badge berdasarkan role
+                  $badge_color = $u['role'] == 'admin' ? 'danger' : ($u['role'] == 'guru' ? 'info' : 'secondary');
 
-    <!-- Tombol Hapus -->
-    <a href="?delete=<?= $u['id_user'] ?>" 
-       onclick="return confirm('Yakin ingin menghapus user <?= htmlspecialchars($u['username']) ?>?')"
-       class="btn btn-danger btn-sm px-4">
-        Hapus
-    </a>
-</td>
-                  </tr>
-
-                  <!-- Modal Edit User -->
-                  <div class="modal fade" id="editUser<?= $u['id_user'] ?>" tabindex="-1" aria-hidden="true">
+                  // Bangun modal edit
+                  $edit_modals .= '
+                  <div class="modal fade" id="editUser'. $u['id_user'] .'" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog">
                       <form method="POST" action="proses/edit.php">
                         <div class="modal-content">
                           <div class="modal-header">
-                            <h5 class="modal-title">Edit User</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            <h5 class="modal-title">Edit User - '. htmlspecialchars($u['username']) .'</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                           </div>
                           <div class="modal-body">
-                            <input type="hidden" name="id_user" value="<?= $u['id_user'] ?>">
+                            <input type="hidden" name="id_user" value="'. $u['id_user'] .'">
                             
                             <div class="mb-3">
-                              <label>Username</label>
-                              <input type="text" name="username" class="form-control" value="<?= htmlspecialchars($u['username']) ?>" required>
+                              <label class="form-label">Username</label>
+                              <input type="text" name="username" class="form-control" value="'. htmlspecialchars($u['username']) .'" required>
                             </div>
                             
                             <div class="mb-3">
-                              <label>Password <small class="text-muted">(Kosongkan jika tidak ingin ubah)</small></label>
-                              <input type="password" name="password" class="form-control">
+                              <label class="form-label">Password <small class="text-muted">(Kosongkan jika tidak ingin ubah)</small></label>
+                              <input type="password" name="password" class="form-control" placeholder="Masukkan password baru">
                             </div>
                             
                             <div class="mb-3">
-                              <label>Nama Lengkap</label>
-                              <input type="text" name="nama_lengkap" class="form-control" value="<?= htmlspecialchars($u['nama_lengkap']) ?>" required>
+                              <label class="form-label">Nama Lengkap</label>
+                              <input type="text" name="nama_lengkap" class="form-control" value="'. htmlspecialchars($u['nama_lengkap']) .'" required>
                             </div>
                             
                             <div class="mb-3">
-                              <label>Role</label>
+                              <label class="form-label">Role</label>
                               <select name="role" class="form-select" required>
-                                <option value="admin" <?= $u['role'] == 'admin' ? 'selected' : '' ?>>Admin</option>
-                                <option value="guru" <?= $u['role'] == 'guru' ? 'selected' : '' ?>>Guru</option>
-                                <option value="orangtua" <?= $u['role'] == 'orangtua' ? 'selected' : '' ?>>Orang Tua</option>
+                                <option value="admin" '. ($u['role'] == 'admin' ? 'selected' : '') .'>Admin</option>
+                                <option value="guru" '. ($u['role'] == 'guru' ? 'selected' : '') .'>Guru</option>
+                                <option value="orangtua" '. ($u['role'] == 'orangtua' ? 'selected' : '') .'>Orang Tua</option>
                               </select>
                             </div>
                           </div>
                           <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                            <button type="submit" name="edit" class="btn btn-success">Update</button>
+                            <button type="submit" name="edit" class="btn btn-success">
+                              <i class="fas fa-save me-2"></i> Update
+                            </button>
                           </div>
                         </div>
                       </form>
                     </div>
-                  </div>
+                  </div>';
+                ?>
+                  <tr>
+                    <td class="ps-4"><span class="text-secondary text-xs"><?= $no++ ?></span></td>
+                    <td><p class="text-xs font-weight-bold mb-0"><?= htmlspecialchars($u['username']) ?></p></td>
+                    <td><p class="text-xs font-weight-bold mb-0"><?= htmlspecialchars($u['nama_lengkap']) ?></p></td>
+                    <td>
+                      <span class="badge badge-sm bg-gradient-<?= $badge_color ?>">
+                        <?= ucfirst($u['role']) ?>
+                      </span>
+                    </td>
+                    <td class="text-center table-actions py-3">
+                      <button class="btn btn-warning btn-sm me-2 px-4" 
+                              data-bs-toggle="modal" 
+                              data-bs-target="#editUser<?= $u['id_user'] ?>">
+                        Edit
+                      </button>
+                      <a href="?delete=<?= $u['id_user'] ?>" 
+                         onclick="return confirm('Yakin ingin menghapus user <?= htmlspecialchars($u['username']) ?>?')"
+                         class="btn btn-danger btn-sm px-4">
+                        Hapus
+                      </a>
+                    </td>
+                  </tr>
                 <?php endwhile; ?>
               </tbody>
             </table>
@@ -160,13 +252,16 @@ if (isset($_GET['msg'])) {
         </div>
       </div>
 
-      <!-- Modal Tambah User (sudah bagus, tetap dipertahankan) -->
+      <!-- Semua Modal Edit User -->
+      <?= $edit_modals ?>
+
+      <!-- Modal Tambah User -->
       <div class="modal fade" id="tambahUser" tabindex="-1" aria-labelledby="tambahUserLabel" aria-hidden="true">
         <div class="modal-dialog">
           <form method="POST" action="proses/tambah.php">
             <div class="modal-content">
               <div class="modal-header">
-                <h5 class="modal-title" id="tambahUserLabel">Tambah User</h5>
+                <h5 class="modal-title" id="tambahUserLabel">Tambah User Baru</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
               </div>
               <div class="modal-body">
