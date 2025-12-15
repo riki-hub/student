@@ -106,7 +106,7 @@
               </div>
 
               <div class="mb-2">
-                <label>Nama Lengkap</label>
+                <label>Nama</label>
                 <input type="text" name="nama_lengkap" class="form-control" required>
               </div>
 
