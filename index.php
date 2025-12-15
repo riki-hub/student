@@ -7,47 +7,46 @@ $error = '';
 
 // Cek apakah form disubmit
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  // Ambil dan bersihkan input
-  $username = trim($_POST['username'] ?? '');
-  $password = $_POST['password'] ?? '';
+    // Ambil dan bersihkan input
+    $username = trim($_POST['username'] ?? '');
+    $password = $_POST['password'] ?? '';
 
-  if ($username !== '' && $password !== '') {
-    // Gunakan prepared statement untuk keamanan (mencegah SQL Injection)
-    $stmt = $conn->prepare("SELECT * FROM users WHERE username = ?");
-    $stmt->bind_param("s", $username);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $data = $result->fetch_assoc();
+    if ($username !== '' && $password !== '') {
+        // Gunakan prepared statement untuk keamanan (mencegah SQL Injection)
+        $stmt = $conn->prepare("SELECT * FROM users WHERE username = ?");
+        $stmt->bind_param("s", $username);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $data = $result->fetch_assoc();
 
-    if ($data) {
-      if (($password == $data['password'])) {
-        // Login berhasil
-        $_SESSION['id_user'] = $data['id_user'];
-        $_SESSION['username'] = $data['username'];
-        header("Location: admin/dashboard.php");
-        exit;
-      } else {
-        $error = "Password salah!";
-      }
+        if ($data) {
+            if (($password == $data['password'])) {
+                // Login berhasil
+                $_SESSION['id_user'] = $data['id_user'];
+                $_SESSION['username'] = $data['username'];
+                header("Location: admin/dashboard.php");
+                exit;
+            } else {
+                $error = "Password salah!";
+            }
+        } else {
+            $error = "Username tidak ditemukan!";
+        }
+        $stmt->close();
     } else {
-      $error = "Username tidak ditemukan!";
+        $error = "Username dan password harus diisi!";
     }
-    $stmt->close();
-  } else {
-    $error = "Username dan password harus diisi!";
-  }
 }
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <link rel="apple-touch-icon" sizes="76x76" href="assets/img/apple-icon.png">
   <link rel="icon" type="image/png" href="assets/img/favicon.png">
-  <title> - Material Dashboard 3</title>
+  <title>Sign In - Material Dashboard 3</title>
 
   <!-- Fonts and icons -->
   <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700,900" />
@@ -70,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="card z-index-0 fadeIn3 fadeInBottom">
               <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
                 <div class="bg-gradient-dark shadow-dark border-radius-lg py-3 pe-1">
-                  <h4 class="text-white font-weight-bolder text-center mt-2 mb-0"></h4>
+                  <h4 class="text-white font-weight-bolder text-center mt-2 mb-0">Sign in</h4>
                   <div class="row mt-3">
                     <div class="col-2 text-center ms-auto"><a class="btn btn-link px-3" href="javascript:;"><i class="fa fa-facebook text-white text-lg"></i></a></div>
                     <div class="col-2 text-center px-1"><a class="btn btn-link px-3" href="javascript:;"><i class="fa fa-github text-white text-lg"></i></a></div>
@@ -96,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <input type="password" name="password" class="form-control" required>
                   </div>
                   <div class="text-center">
-                    <button type="submit" class="btn bg-gradient-dark w-100 my-4 mb-2"></button>
+                    <button type="submit" class="btn bg-gradient-dark w-100 my-4 mb-2">Sign in</button>
                   </div>
                 </form>
               </div>
@@ -114,5 +113,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <script src="assets/js/plugins/smooth-scrollbar.min.js"></script>
   <script src="assets/js/material-dashboard.min.js?v=3.2.0"></script>
 </body>
-
 </html>
