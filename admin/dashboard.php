@@ -1,17 +1,97 @@
-<!--
-=========================================================
-* Material Dashboard 3 - v3.2.0
-=========================================================
+<?php
+require '../koneksi.php';
+session_start();
 
-* Product Page: https://www.creative-tim.com/product/material-dashboard
-* Copyright 2024 Creative Tim (https://www.creative-tim.com)
-* Licensed under MIT (https://www.creative-tim.com/license)
-* Coded by Creative Tim
+// Cek login
+if (!isset($_SESSION['id_user'])) {
+  header("Location: ../sign-in.php");
+  exit;
+}
 
-=========================================================
+// Ambil data statistik
+// Total Admin (dari tabel user berdasarkan role admin)
+$query_admin = mysqli_query($conn, "SELECT COUNT(*) as total FROM users WHERE role = 'admin'");
+$total_admin = mysqli_fetch_assoc($query_admin)['total'];
 
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
--->
+// Total Siswa (dari tabel siswa yang aktif)
+$query_siswa = mysqli_query($conn, "SELECT COUNT(*) as total FROM siswa WHERE status = 'aktif'");
+$total_siswa = mysqli_fetch_assoc($query_siswa)['total'];
+
+// Total Siswa bulan lalu untuk perbandingan
+$bulan_lalu = date('Y-m-d', strtotime('-1 month'));
+$query_siswa_lalu = mysqli_query($conn, "SELECT COUNT(*) as total FROM siswa WHERE status = 'aktif'");
+$total_siswa_lalu = mysqli_fetch_assoc($query_siswa_lalu)['total'];
+$persentase_siswa = $total_siswa_lalu > 0 ? round((($total_siswa - $total_siswa_lalu) / $total_siswa_lalu) * 100, 1) : 0;
+
+// Total Pelanggaran
+$query_pelanggaran = mysqli_query($conn, "SELECT COUNT(*) as total FROM pelanggaran");
+$total_pelanggaran = mysqli_fetch_assoc($query_pelanggaran)['total'];
+
+// Total Pelanggaran bulan ini
+$bulan_ini = date('Y-m');
+$query_pelanggaran_bulan = mysqli_query($conn, "SELECT COUNT(*) as total FROM pelanggaran WHERE DATE_FORMAT(tanggal, '%Y-%m') = '$bulan_ini'");
+$total_pelanggaran_bulan = mysqli_fetch_assoc($query_pelanggaran_bulan)['total'];
+
+// Total Pelanggaran bulan lalu untuk perbandingan
+$bulan_lalu_format = date('Y-m', strtotime('-1 month'));
+$query_pelanggaran_lalu = mysqli_query($conn, "SELECT COUNT(*) as total FROM pelanggaran WHERE DATE_FORMAT(tanggal, '%Y-%m') = '$bulan_lalu_format'");
+$total_pelanggaran_lalu = mysqli_fetch_assoc($query_pelanggaran_lalu)['total'];
+$persentase_pelanggaran = $total_pelanggaran_lalu > 0 ? round((($total_pelanggaran_bulan - $total_pelanggaran_lalu) / $total_pelanggaran_lalu) * 100, 1) : 0;
+
+// Total Guru/Staff (role selain admin dan siswa)
+$query_guru = mysqli_query($conn, "SELECT COUNT(*) as total FROM users WHERE role IN ('guru', 'admin')");
+$total_guru = mysqli_fetch_assoc($query_guru)['total'];
+
+// =============================
+// AMBIL FILTER DARI FORM
+// =============================
+$bulan_awal  = isset($_GET['bulan_awal'])  ? (int)$_GET['bulan_awal']  : 1;
+$bulan_akhir = isset($_GET['bulan_akhir']) ? (int)$_GET['bulan_akhir'] : 12;
+$tahun       = isset($_GET['tahun'])       ? (int)$_GET['tahun']       : date('Y');
+
+// Validasi sederhana
+if ($bulan_awal > $bulan_akhir) {
+    $bulan_awal = 1;
+    $bulan_akhir = 12;
+}
+
+// =============================
+// QUERY UNTUK GRAFIK PER BULAN
+// =============================
+$sql_grafik = "
+    SELECT 
+        MONTH(tanggal) AS bulan,
+        COUNT(*) AS total
+    FROM pelanggaran
+    WHERE 
+        YEAR(tanggal) = $tahun
+        AND MONTH(tanggal) BETWEEN $bulan_awal AND $bulan_akhir
+    GROUP BY MONTH(tanggal)
+    ORDER BY MONTH(tanggal)
+";
+
+$result_grafik = mysqli_query($conn, $sql_grafik);
+
+// Siapkan data untuk grafik
+$label = [];
+$data  = [];
+
+$nama_bulan = [
+    1=>'Januari', 2=>'Februari', 3=>'Maret', 4=>'April', 
+    5=>'Mei', 6=>'Juni', 7=>'Juli', 8=>'Agustus',
+    9=>'September', 10=>'Oktober', 11=>'November', 12=>'Desember'
+];
+
+if (mysqli_num_rows($result_grafik) > 0) {
+    while ($row = mysqli_fetch_assoc($result_grafik)) {
+        $label[] = $nama_bulan[$row['bulan']];
+        $data[]  = (int)$row['total'];
+    }
+} else {
+    $label = ['Belum ada data'];
+    $data  = [0];
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -20,772 +100,384 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <link rel="apple-touch-icon" sizes="76x76" href="../assets/img/apple-icon.png">
   <link rel="icon" type="image/png" href="../assets/img/favicon.png">
-  <title>
-    Material Dashboard 3 by Creative Tim
-  </title>
-  <!--     Fonts and icons     -->
+  <title>Dashboard - Material Dashboard</title>
+  
   <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700,900" />
-  <!-- Nucleo Icons -->
   <link href="../assets/css/nucleo-icons.css" rel="stylesheet" />
   <link href="../assets/css/nucleo-svg.css" rel="stylesheet" />
-  <!-- Font Awesome Icons -->
   <script src="https://kit.fontawesome.com/42d5adcbca.js" crossorigin="anonymous"></script>
-  <!-- Material Icons -->
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" />
-  <!-- CSS Files -->
   <link id="pagestyle" href="../assets/css/material-dashboard.css?v=3.2.0" rel="stylesheet" />
+  
+  <style>
+    .filter-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .filter-card h6 {
+      color: white;
+      margin-bottom: 15px;
+      font-weight: 600;
+    }
+    
+    .filter-box {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    
+    .filter-box select,
+    .filter-box button {
+      padding: 8px 15px;
+      border-radius: 8px;
+      border: none;
+      font-size: 14px;
+    }
+    
+    .filter-box select {
+      background: white;
+      color: #344767;
+      cursor: pointer;
+    }
+    
+    .filter-box button {
+      background: #1a73e8;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    
+    .filter-box button:hover {
+      background: #1557b0;
+      transform: translateY(-2px);
+    }
+    
+    .filter-box span {
+      color: white;
+      font-weight: 500;
+    }
+  </style>
 </head>
 
-<body class="g-sidenav-show  bg-gray-100">
-  <?php
-  include 'sidebar.php';
-  ?>
-  <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg ">
-    <!-- Navbar -->
-    <?php include 'nav.php' ?>
-    <!-- End Navbar -->
+<body class="g-sidenav-show bg-gray-100">
+  <?php include "sidebar.php"; ?>
+  <main class="main-content position-relative max-height-vh-100 h-100 border-radius-lg">
+    <?php include "nav.php"; ?>
+
     <div class="container-fluid py-2">
       <div class="row">
         <div class="ms-3">
           <h3 class="mb-0 h4 font-weight-bolder">Dashboard</h3>
-          <p class="mb-4">
-            Check the sales, value and bounce rate by country.
-          </p>
+          <p class="mb-4">Statistik dan ringkasan sistem poin pelanggaran siswa</p>
         </div>
+
+        <!-- Card Total Admin -->
         <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
           <div class="card">
             <div class="card-header p-2 ps-3">
               <div class="d-flex justify-content-between">
                 <div>
-                  <p class="text-sm mb-0 text-capitalize">Today's Money</p>
-                  <h4 class="mb-0">$53k</h4>
+                  <p class="text-sm mb-0 text-capitalize">Total Admin</p>
+                  <h4 class="mb-0"><?= number_format($total_admin) ?></h4>
                 </div>
                 <div class="icon icon-md icon-shape bg-gradient-dark shadow-dark shadow text-center border-radius-lg">
-                  <i class="material-symbols-rounded opacity-10">weekend</i>
+                  <i class="material-symbols-rounded opacity-10">admin_panel_settings</i>
                 </div>
               </div>
             </div>
             <hr class="dark horizontal my-0">
             <div class="card-footer p-2 ps-3">
-              <p class="mb-0 text-sm"><span class="text-success font-weight-bolder">+55% </span>than last week</p>
+              <p class="mb-0 text-sm">
+                <span class="text-secondary font-weight-bolder">Admin aktif </span>
+                dalam sistem
+              </p>
             </div>
           </div>
         </div>
+
+        <!-- Card Total Siswa -->
         <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
           <div class="card">
             <div class="card-header p-2 ps-3">
               <div class="d-flex justify-content-between">
                 <div>
-                  <p class="text-sm mb-0 text-capitalize">Today's Users</p>
-                  <h4 class="mb-0">2300</h4>
+                  <p class="text-sm mb-0 text-capitalize">Total Siswa</p>
+                  <h4 class="mb-0"><?= number_format($total_siswa) ?></h4>
                 </div>
-                <div class="icon icon-md icon-shape bg-gradient-dark shadow-dark shadow text-center border-radius-lg">
+                <div class="icon icon-md icon-shape bg-gradient-primary shadow-primary shadow text-center border-radius-lg">
                   <i class="material-symbols-rounded opacity-10">person</i>
                 </div>
               </div>
             </div>
             <hr class="dark horizontal my-0">
             <div class="card-footer p-2 ps-3">
-              <p class="mb-0 text-sm"><span class="text-success font-weight-bolder">+3% </span>than last month</p>
+              <p class="mb-0 text-sm">
+                <?php if ($persentase_siswa > 0): ?>
+                  <span class="text-success font-weight-bolder">+<?= abs($persentase_siswa) ?>% </span>dari bulan lalu
+                <?php elseif ($persentase_siswa < 0): ?>
+                  <span class="text-danger font-weight-bolder"><?= $persentase_siswa ?>% </span>dari bulan lalu
+                <?php else: ?>
+                  <span class="text-secondary font-weight-bolder">Tidak ada perubahan</span>
+                <?php endif; ?>
+              </p>
             </div>
           </div>
         </div>
+
+        <!-- Card Total Pelanggaran -->
         <div class="col-xl-3 col-sm-6 mb-xl-0 mb-4">
           <div class="card">
             <div class="card-header p-2 ps-3">
               <div class="d-flex justify-content-between">
                 <div>
-                  <p class="text-sm mb-0 text-capitalize">Ads Views</p>
-                  <h4 class="mb-0">3,462</h4>
+                  <p class="text-sm mb-0 text-capitalize">Total Pelanggaran</p>
+                  <h4 class="mb-0"><?= number_format($total_pelanggaran) ?></h4>
                 </div>
-                <div class="icon icon-md icon-shape bg-gradient-dark shadow-dark shadow text-center border-radius-lg">
-                  <i class="material-symbols-rounded opacity-10">leaderboard</i>
+                <div class="icon icon-md icon-shape bg-gradient-danger shadow-danger shadow text-center border-radius-lg">
+                  <i class="material-symbols-rounded opacity-10">warning</i>
                 </div>
               </div>
             </div>
             <hr class="dark horizontal my-0">
             <div class="card-footer p-2 ps-3">
-              <p class="mb-0 text-sm"><span class="text-danger font-weight-bolder">-2% </span>than yesterday</p>
+              <p class="mb-0 text-sm">
+                <?php if ($persentase_pelanggaran > 0): ?>
+                  <span class="text-danger font-weight-bolder">+<?= abs($persentase_pelanggaran) ?>% </span>dari bulan lalu
+                <?php elseif ($persentase_pelanggaran < 0): ?>
+                  <span class="text-success font-weight-bolder"><?= $persentase_pelanggaran ?>% </span>dari bulan lalu
+                <?php else: ?>
+                  <span class="text-secondary font-weight-bolder">Tidak ada perubahan</span>
+                <?php endif; ?>
+              </p>
             </div>
           </div>
         </div>
+
+        <!-- Card Total Guru/Staff -->
         <div class="col-xl-3 col-sm-6">
           <div class="card">
             <div class="card-header p-2 ps-3">
               <div class="d-flex justify-content-between">
                 <div>
-                  <p class="text-sm mb-0 text-capitalize">Sales</p>
-                  <h4 class="mb-0">$103,430</h4>
+                  <p class="text-sm mb-0 text-capitalize">Total Guru/Staff</p>
+                  <h4 class="mb-0"><?= number_format($total_guru) ?></h4>
                 </div>
-                <div class="icon icon-md icon-shape bg-gradient-dark shadow-dark shadow text-center border-radius-lg">
-                  <i class="material-symbols-rounded opacity-10">weekend</i>
+                <div class="icon icon-md icon-shape bg-gradient-success shadow-success shadow text-center border-radius-lg">
+                  <i class="material-symbols-rounded opacity-10">school</i>
                 </div>
               </div>
             </div>
             <hr class="dark horizontal my-0">
             <div class="card-footer p-2 ps-3">
-              <p class="mb-0 text-sm"><span class="text-success font-weight-bolder">+5% </span>than yesterday</p>
+              <p class="mb-0 text-sm">
+                <span class="text-secondary font-weight-bolder">Guru & staff </span>
+                terdaftar
+              </p>
             </div>
           </div>
         </div>
       </div>
+
+      <!-- Filter Grafik -->
+      <div class="row mt-4">
+        <div class="col-lg-12">
+          <div class="filter-card">
+            <h6><i class="material-symbols-rounded" style="vertical-align: middle;">tune</i> Filter Grafik Pelanggaran</h6>
+            <form method="GET" class="filter-box">
+              <span>Periode:</span>
+              <select name="bulan_awal">
+                <?php
+                $bulan_short = [
+                  1=>'Jan', 2=>'Feb', 3=>'Mar', 4=>'Apr', 5=>'Mei', 6=>'Jun',
+                  7=>'Jul', 8=>'Agu', 9=>'Sep', 10=>'Okt', 11=>'Nov', 12=>'Des'
+                ];
+                foreach ($bulan_short as $key => $value) {
+                  $selected = ($key == $bulan_awal) ? 'selected' : '';
+                  echo "<option value='$key' $selected>$value</option>";
+                }
+                ?>
+              </select>
+
+              <span>s/d</span>
+
+              <select name="bulan_akhir">
+                <?php
+                foreach ($bulan_short as $key => $value) {
+                  $selected = ($key == $bulan_akhir) ? 'selected' : '';
+                  echo "<option value='$key' $selected>$value</option>";
+                }
+                ?>
+              </select>
+
+              <select name="tahun">
+                <?php
+                for ($i = date('Y') - 5; $i <= date('Y'); $i++) {
+                  $selected = ($i == $tahun) ? 'selected' : '';
+                  echo "<option value='$i' $selected>$i</option>";
+                }
+                ?>
+              </select>
+
+              <button type="submit">
+                <i class="material-symbols-rounded" style="font-size: 18px; vertical-align: middle;">search</i>
+                Tampilkan
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grafik Pelanggaran -->
       <div class="row">
-        <div class="col-lg-4 col-md-6 mt-4 mb-4">
-          <div class="card">
-            <div class="card-body">
-              <h6 class="mb-0 ">Website Views</h6>
-              <p class="text-sm ">Last Campaign Performance</p>
-              <div class="pe-2">
-                <div class="chart">
-                  <canvas id="chart-bars" class="chart-canvas" height="170"></canvas>
-                </div>
-              </div>
-              <hr class="dark horizontal">
-              <div class="d-flex ">
-                <i class="material-symbols-rounded text-sm my-auto me-1">schedule</i>
-                <p class="mb-0 text-sm"> campaign sent 2 days ago </p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-lg-4 col-md-6 mt-4 mb-4">
-          <div class="card ">
-            <div class="card-body">
-              <h6 class="mb-0 "> Daily Sales </h6>
-              <p class="text-sm "> (<span class="font-weight-bolder">+15%</span>) increase in today sales. </p>
-              <div class="pe-2">
-                <div class="chart">
-                  <canvas id="chart-line" class="chart-canvas" height="170"></canvas>
-                </div>
-              </div>
-              <hr class="dark horizontal">
-              <div class="d-flex ">
-                <i class="material-symbols-rounded text-sm my-auto me-1">schedule</i>
-                <p class="mb-0 text-sm"> updated 4 min ago </p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-lg-4 mt-4 mb-3">
-          <div class="card">
-            <div class="card-body">
-              <h6 class="mb-0 ">Completed Tasks</h6>
-              <p class="text-sm ">Last Campaign Performance</p>
-              <div class="pe-2">
-                <div class="chart">
-                  <canvas id="chart-line-tasks" class="chart-canvas" height="170"></canvas>
-                </div>
-              </div>
-              <hr class="dark horizontal">
-              <div class="d-flex ">
-                <i class="material-symbols-rounded text-sm my-auto me-1">schedule</i>
-                <p class="mb-0 text-sm">just updated</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="row mb-4">
-        <div class="col-lg-8 col-md-6 mb-md-0 mb-4">
+        <div class="col-lg-12">
           <div class="card">
             <div class="card-header pb-0">
-              <div class="row">
-                <div class="col-lg-6 col-7">
-                  <h6>Projects</h6>
-                  <p class="text-sm mb-0">
-                    <i class="fa fa-check text-info" aria-hidden="true"></i>
-                    <span class="font-weight-bold ms-1">30 done</span> this month
-                  </p>
-                </div>
-                <div class="col-lg-6 col-5 my-auto text-end">
-                  <div class="dropdown float-lg-end pe-4">
-                    <a class="cursor-pointer" id="dropdownTable" data-bs-toggle="dropdown" aria-expanded="false">
-                      <i class="fa fa-ellipsis-v text-secondary"></i>
-                    </a>
-                    <ul class="dropdown-menu px-2 py-3 ms-sm-n4 ms-n5" aria-labelledby="dropdownTable">
-                      <li><a class="dropdown-item border-radius-md" href="javascript:;">Action</a></li>
-                      <li><a class="dropdown-item border-radius-md" href="javascript:;">Another action</a></li>
-                      <li><a class="dropdown-item border-radius-md" href="javascript:;">Something else here</a></li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
+              <h6>Grafik Pelanggaran Per Bulan</h6>
+              <p class="text-sm">Periode: <?= $nama_bulan[$bulan_awal] ?> - <?= $nama_bulan[$bulan_akhir] ?> <?= $tahun ?></p>
+            </div>
+            <div class="card-body">
+              <canvas id="grafikPelanggaran" style="max-height: 400px;"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabel Pelanggaran Terbaru -->
+      <div class="row mt-4">
+        <div class="col-lg-12">
+          <div class="card">
+            <div class="card-header pb-0">
+              <h6>Pelanggaran Terbaru</h6>
+              <p class="text-sm">10 Data pelanggaran terakhir</p>
             </div>
             <div class="card-body px-0 pb-2">
               <div class="table-responsive">
                 <table class="table align-items-center mb-0">
                   <thead>
                     <tr>
-                      <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Companies</th>
-                      <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Members</th>
-                      <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Budget</th>
-                      <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Completion</th>
+                      <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Siswa</th>
+                      <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Pelanggaran</th>
+                      <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Tanggal</th>
+                      <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Poin</th>
+                      <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Pelapor</th>
                     </tr>
                   </thead>
                   <tbody>
+                    <?php
+                    $query_recent = mysqli_query($conn, "
+                      SELECT p.*, 
+                             s.nama_siswa, s.nis,
+                             jp.nama_pelanggaran,
+                             u.nama_lengkap
+                      FROM pelanggaran p
+                      LEFT JOIN siswa s ON p.id_siswa = s.id_siswa
+                      LEFT JOIN jenis_pelanggaran jp ON p.id_jenis = jp.id_jenis
+                      LEFT JOIN users u ON p.id_user = u.id_user
+                      ORDER BY p.tanggal DESC, p.id_pelanggaran DESC
+                      LIMIT 10
+                    ");
+
+                    while ($r = mysqli_fetch_assoc($query_recent)):
+                      $tgl = date('d M Y', strtotime($r['tanggal']));
+                    ?>
                     <tr>
                       <td>
                         <div class="d-flex px-2 py-1">
-                          <div>
-                            <img src="../assets/img/small-logos/logo-xd.svg" class="avatar avatar-sm me-3" alt="xd">
-                          </div>
                           <div class="d-flex flex-column justify-content-center">
-                            <h6 class="mb-0 text-sm">Material XD Version</h6>
+                            <h6 class="mb-0 text-sm"><?= htmlspecialchars($r['nama_siswa'] ?? '-') ?></h6>
+                            <p class="text-xs text-secondary mb-0"><?= htmlspecialchars($r['nis'] ?? '-') ?></p>
                           </div>
                         </div>
                       </td>
                       <td>
-                        <div class="avatar-group mt-2">
-                          <a href="javascript:;" class="avatar avatar-xs rounded-circle" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Ryan Tompson">
-                            <img src="../assets/img/team-1.jpg" alt="team1">
-                          </a>
-                          <a href="javascript:;" class="avatar avatar-xs rounded-circle" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Romina Hadid">
-                            <img src="../assets/img/team-2.jpg" alt="team2">
-                          </a>
-                          <a href="javascript:;" class="avatar avatar-xs rounded-circle" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Alexander Smith">
-                            <img src="../assets/img/team-3.jpg" alt="team3">
-                          </a>
-                          <a href="javascript:;" class="avatar avatar-xs rounded-circle" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Jessica Doe">
-                            <img src="../assets/img/team-4.jpg" alt="team4">
-                          </a>
-                        </div>
+                        <p class="text-xs font-weight-bold mb-0"><?= htmlspecialchars($r['nama_pelanggaran'] ?? '-') ?></p>
                       </td>
-                      <td class="align-middle text-center text-sm">
-                        <span class="text-xs font-weight-bold"> $14,000 </span>
+                      <td>
+                        <p class="text-xs text-secondary mb-0"><?= $tgl ?></p>
                       </td>
-                      <td class="align-middle">
-                        <div class="progress-wrapper w-75 mx-auto">
-                          <div class="progress-info">
-                            <div class="progress-percentage">
-                              <span class="text-xs font-weight-bold">60%</span>
-                            </div>
-                          </div>
-                          <div class="progress">
-                            <div class="progress-bar bg-gradient-info w-60" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"></div>
-                          </div>
-                        </div>
+                      <td class="align-middle text-center">
+                        <span class="badge badge-sm bg-gradient-danger">-<?= $r['poin_berkurang'] ?></span>
+                      </td>
+                      <td class="align-middle text-center">
+                        <span class="text-secondary text-xs font-weight-bold"><?= htmlspecialchars($r['nama_lengkap'] ?? '-') ?></span>
                       </td>
                     </tr>
-                    <tr>
-                      <td>
-                        <div class="d-flex px-2 py-1">
-                          <div>
-                            <img src="../assets/img/small-logos/logo-atlassian.svg" class="avatar avatar-sm me-3" alt="atlassian">
-                          </div>
-                          <div class="d-flex flex-column justify-content-center">
-                            <h6 class="mb-0 text-sm">Add Progress Track</h6>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <div class="avatar-group mt-2">
-                          <a href="javascript:;" class="avatar avatar-xs rounded-circle" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Romina Hadid">
-                            <img src="../assets/img/team-2.jpg" alt="team5">
-                          </a>
-                          <a href="javascript:;" class="avatar avatar-xs rounded-circle" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Jessica Doe">
-                            <img src="../assets/img/team-4.jpg" alt="team6">
-                          </a>
-                        </div>
-                      </td>
-                      <td class="align-middle text-center text-sm">
-                        <span class="text-xs font-weight-bold"> $3,000 </span>
-                      </td>
-                      <td class="align-middle">
-                        <div class="progress-wrapper w-75 mx-auto">
-                          <div class="progress-info">
-                            <div class="progress-percentage">
-                              <span class="text-xs font-weight-bold">10%</span>
-                            </div>
-                          </div>
-                          <div class="progress">
-                            <div class="progress-bar bg-gradient-info w-10" role="progressbar" aria-valuenow="10" aria-valuemin="0" aria-valuemax="100"></div>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <div class="d-flex px-2 py-1">
-                          <div>
-                            <img src="../assets/img/small-logos/logo-slack.svg" class="avatar avatar-sm me-3" alt="team7">
-                          </div>
-                          <div class="d-flex flex-column justify-content-center">
-                            <h6 class="mb-0 text-sm">Fix Platform Errors</h6>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <div class="avatar-group mt-2">
-                          <a href="javascript:;" class="avatar avatar-xs rounded-circle" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Romina Hadid">
-                            <img src="../assets/img/team-3.jpg" alt="team8">
-                          </a>
-                          <a href="javascript:;" class="avatar avatar-xs rounded-circle" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Jessica Doe">
-                            <img src="../assets/img/team-1.jpg" alt="team9">
-                          </a>
-                        </div>
-                      </td>
-                      <td class="align-middle text-center text-sm">
-                        <span class="text-xs font-weight-bold"> Not set </span>
-                      </td>
-                      <td class="align-middle">
-                        <div class="progress-wrapper w-75 mx-auto">
-                          <div class="progress-info">
-                            <div class="progress-percentage">
-                              <span class="text-xs font-weight-bold">100%</span>
-                            </div>
-                          </div>
-                          <div class="progress">
-                            <div class="progress-bar bg-gradient-success w-100" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <div class="d-flex px-2 py-1">
-                          <div>
-                            <img src="../assets/img/small-logos/logo-spotify.svg" class="avatar avatar-sm me-3" alt="spotify">
-                          </div>
-                          <div class="d-flex flex-column justify-content-center">
-                            <h6 class="mb-0 text-sm">Launch our Mobile App</h6>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <div class="avatar-group mt-2">
-                          <a href="javascript:;" class="avatar avatar-xs rounded-circle" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Ryan Tompson">
-                            <img src="../assets/img/team-4.jpg" alt="user1">
-                          </a>
-                          <a href="javascript:;" class="avatar avatar-xs rounded-circle" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Romina Hadid">
-                            <img src="../assets/img/team-3.jpg" alt="user2">
-                          </a>
-                          <a href="javascript:;" class="avatar avatar-xs rounded-circle" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Alexander Smith">
-                            <img src="../assets/img/team-4.jpg" alt="user3">
-                          </a>
-                          <a href="javascript:;" class="avatar avatar-xs rounded-circle" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Jessica Doe">
-                            <img src="../assets/img/team-1.jpg" alt="user4">
-                          </a>
-                        </div>
-                      </td>
-                      <td class="align-middle text-center text-sm">
-                        <span class="text-xs font-weight-bold"> $20,500 </span>
-                      </td>
-                      <td class="align-middle">
-                        <div class="progress-wrapper w-75 mx-auto">
-                          <div class="progress-info">
-                            <div class="progress-percentage">
-                              <span class="text-xs font-weight-bold">100%</span>
-                            </div>
-                          </div>
-                          <div class="progress">
-                            <div class="progress-bar bg-gradient-success w-100" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <div class="d-flex px-2 py-1">
-                          <div>
-                            <img src="../assets/img/small-logos/logo-jira.svg" class="avatar avatar-sm me-3" alt="jira">
-                          </div>
-                          <div class="d-flex flex-column justify-content-center">
-                            <h6 class="mb-0 text-sm">Add the New Pricing Page</h6>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <div class="avatar-group mt-2">
-                          <a href="javascript:;" class="avatar avatar-xs rounded-circle" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Ryan Tompson">
-                            <img src="../assets/img/team-4.jpg" alt="user5">
-                          </a>
-                        </div>
-                      </td>
-                      <td class="align-middle text-center text-sm">
-                        <span class="text-xs font-weight-bold"> $500 </span>
-                      </td>
-                      <td class="align-middle">
-                        <div class="progress-wrapper w-75 mx-auto">
-                          <div class="progress-info">
-                            <div class="progress-percentage">
-                              <span class="text-xs font-weight-bold">25%</span>
-                            </div>
-                          </div>
-                          <div class="progress">
-                            <div class="progress-bar bg-gradient-info w-25" role="progressbar" aria-valuenow="25" aria-valuemin="0" aria-valuemax="25"></div>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>
-                        <div class="d-flex px-2 py-1">
-                          <div>
-                            <img src="../assets/img/small-logos/logo-invision.svg" class="avatar avatar-sm me-3" alt="invision">
-                          </div>
-                          <div class="d-flex flex-column justify-content-center">
-                            <h6 class="mb-0 text-sm">Redesign New Online Shop</h6>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <div class="avatar-group mt-2">
-                          <a href="javascript:;" class="avatar avatar-xs rounded-circle" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Ryan Tompson">
-                            <img src="../assets/img/team-1.jpg" alt="user6">
-                          </a>
-                          <a href="javascript:;" class="avatar avatar-xs rounded-circle" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Jessica Doe">
-                            <img src="../assets/img/team-4.jpg" alt="user7">
-                          </a>
-                        </div>
-                      </td>
-                      <td class="align-middle text-center text-sm">
-                        <span class="text-xs font-weight-bold"> $2,000 </span>
-                      </td>
-                      <td class="align-middle">
-                        <div class="progress-wrapper w-75 mx-auto">
-                          <div class="progress-info">
-                            <div class="progress-percentage">
-                              <span class="text-xs font-weight-bold">40%</span>
-                            </div>
-                          </div>
-                          <div class="progress">
-                            <div class="progress-bar bg-gradient-info w-40" role="progressbar" aria-valuenow="40" aria-valuemin="0" aria-valuemax="40"></div>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
+                    <?php endwhile; ?>
                   </tbody>
                 </table>
               </div>
             </div>
           </div>
         </div>
-        <div class="col-lg-4 col-md-6">
-          <div class="card h-100">
-            <div class="card-header pb-0">
-              <h6>Orders overview</h6>
-              <p class="text-sm">
-                <i class="fa fa-arrow-up text-success" aria-hidden="true"></i>
-                <span class="font-weight-bold">24%</span> this month
-              </p>
-            </div>
-            <div class="card-body p-3">
-              <div class="timeline timeline-one-side">
-                <div class="timeline-block mb-3">
-                  <span class="timeline-step">
-                    <i class="material-symbols-rounded text-success text-gradient">notifications</i>
-                  </span>
-                  <div class="timeline-content">
-                    <h6 class="text-dark text-sm font-weight-bold mb-0">$2400, Design changes</h6>
-                    <p class="text-secondary font-weight-bold text-xs mt-1 mb-0">22 DEC 7:20 PM</p>
-                  </div>
-                </div>
-                <div class="timeline-block mb-3">
-                  <span class="timeline-step">
-                    <i class="material-symbols-rounded text-danger text-gradient">code</i>
-                  </span>
-                  <div class="timeline-content">
-                    <h6 class="text-dark text-sm font-weight-bold mb-0">New order #1832412</h6>
-                    <p class="text-secondary font-weight-bold text-xs mt-1 mb-0">21 DEC 11 PM</p>
-                  </div>
-                </div>
-                <div class="timeline-block mb-3">
-                  <span class="timeline-step">
-                    <i class="material-symbols-rounded text-info text-gradient">shopping_cart</i>
-                  </span>
-                  <div class="timeline-content">
-                    <h6 class="text-dark text-sm font-weight-bold mb-0">Server payments for April</h6>
-                    <p class="text-secondary font-weight-bold text-xs mt-1 mb-0">21 DEC 9:34 PM</p>
-                  </div>
-                </div>
-                <div class="timeline-block mb-3">
-                  <span class="timeline-step">
-                    <i class="material-symbols-rounded text-warning text-gradient">credit_card</i>
-                  </span>
-                  <div class="timeline-content">
-                    <h6 class="text-dark text-sm font-weight-bold mb-0">New card added for order #4395133</h6>
-                    <p class="text-secondary font-weight-bold text-xs mt-1 mb-0">20 DEC 2:20 AM</p>
-                  </div>
-                </div>
-                <div class="timeline-block mb-3">
-                  <span class="timeline-step">
-                    <i class="material-symbols-rounded text-primary text-gradient">key</i>
-                  </span>
-                  <div class="timeline-content">
-                    <h6 class="text-dark text-sm font-weight-bold mb-0">Unlock packages for development</h6>
-                    <p class="text-secondary font-weight-bold text-xs mt-1 mb-0">18 DEC 4:54 AM</p>
-                  </div>
-                </div>
-                <div class="timeline-block">
-                  <span class="timeline-step">
-                    <i class="material-symbols-rounded text-dark text-gradient">payments</i>
-                  </span>
-                  <div class="timeline-content">
-                    <h6 class="text-dark text-sm font-weight-bold mb-0">New order #9583120</h6>
-                    <p class="text-secondary font-weight-bold text-xs mt-1 mb-0">17 DEC</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
-
     </div>
   </main>
 
-  <!--   Core JS Files   -->
   <script src="../assets/js/core/popper.min.js"></script>
   <script src="../assets/js/core/bootstrap.min.js"></script>
   <script src="../assets/js/plugins/perfect-scrollbar.min.js"></script>
-  <script src="../assets/js/plugins/smooth-scrollbar.min.js"></script>
-  <script src="../assets/js/plugins/chartjs.min.js"></script>
-  <script>
-    var ctx = document.getElementById("chart-bars").getContext("2d");
+  <script src="../assets/js/material-dashboard.min.js?v=3.2.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    new Chart(ctx, {
-      type: "bar",
+  <script>
+    // Data dari PHP
+    const labels = <?= json_encode($label); ?>;
+    const dataPelanggaran = <?= json_encode($data); ?>;
+
+    // Buat grafik
+    new Chart(document.getElementById('grafikPelanggaran'), {
+      type: 'line',
       data: {
-        labels: ["M", "T", "W", "T", "F", "S", "S"],
+        labels: labels,
         datasets: [{
-          label: "Views",
+          label: 'Jumlah Pelanggaran',
+          data: dataPelanggaran,
+          fill: true,
+          backgroundColor: 'rgba(255, 99, 132, 0.1)',
+          borderColor: 'rgb(255, 99, 132)',
           tension: 0.4,
-          borderWidth: 0,
-          borderRadius: 4,
-          borderSkipped: false,
-          backgroundColor: "#43A047",
-          data: [50, 45, 22, 28, 50, 60, 76],
-          barThickness: 'flex'
-        }, ],
+          borderWidth: 3,
+          pointRadius: 5,
+          pointBackgroundColor: 'rgb(255, 99, 132)',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2
+        }]
       },
       options: {
         responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: false,
-          }
-        },
-        interaction: {
-          intersect: false,
-          mode: 'index',
-        },
+        maintainAspectRatio: true,
         scales: {
           y: {
-            grid: {
-              drawBorder: false,
-              display: true,
-              drawOnChartArea: true,
-              drawTicks: false,
-              borderDash: [5, 5],
-              color: '#e5e5e5'
-            },
+            beginAtZero: true,
             ticks: {
-              suggestedMin: 0,
-              suggestedMax: 500,
-              beginAtZero: true,
-              padding: 10,
-              font: {
-                size: 14,
-                lineHeight: 2
-              },
-              color: "#737373"
-            },
-          },
-          x: {
-            grid: {
-              drawBorder: false,
-              display: false,
-              drawOnChartArea: false,
-              drawTicks: false,
-              borderDash: [5, 5]
-            },
-            ticks: {
-              display: true,
-              color: '#737373',
-              padding: 10,
-              font: {
-                size: 14,
-                lineHeight: 2
-              },
+              stepSize: 1
             }
-          },
+          }
         },
-      },
-    });
-
-
-    var ctx2 = document.getElementById("chart-line").getContext("2d");
-
-    new Chart(ctx2, {
-      type: "line",
-      data: {
-        labels: ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"],
-        datasets: [{
-          label: "Sales",
-          tension: 0,
-          borderWidth: 2,
-          pointRadius: 3,
-          pointBackgroundColor: "#43A047",
-          pointBorderColor: "transparent",
-          borderColor: "#43A047",
-          backgroundColor: "transparent",
-          fill: true,
-          data: [120, 230, 130, 440, 250, 360, 270, 180, 90, 300, 310, 220],
-          maxBarThickness: 6
-
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
         plugins: {
           legend: {
-            display: false,
+            display: true,
+            position: 'top'
           },
           tooltip: {
-            callbacks: {
-              title: function(context) {
-                const fullMonths = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-                return fullMonths[context[0].dataIndex];
-              }
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            padding: 12,
+            titleFont: {
+              size: 14
+            },
+            bodyFont: {
+              size: 13
             }
           }
-        },
-        interaction: {
-          intersect: false,
-          mode: 'index',
-        },
-        scales: {
-          y: {
-            grid: {
-              drawBorder: false,
-              display: true,
-              drawOnChartArea: true,
-              drawTicks: false,
-              borderDash: [4, 4],
-              color: '#e5e5e5'
-            },
-            ticks: {
-              display: true,
-              color: '#737373',
-              padding: 10,
-              font: {
-                size: 12,
-                lineHeight: 2
-              },
-            }
-          },
-          x: {
-            grid: {
-              drawBorder: false,
-              display: false,
-              drawOnChartArea: false,
-              drawTicks: false,
-              borderDash: [5, 5]
-            },
-            ticks: {
-              display: true,
-              color: '#737373',
-              padding: 10,
-              font: {
-                size: 12,
-                lineHeight: 2
-              },
-            }
-          },
-        },
-      },
-    });
-
-    var ctx3 = document.getElementById("chart-line-tasks").getContext("2d");
-
-    new Chart(ctx3, {
-      type: "line",
-      data: {
-        labels: ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-        datasets: [{
-          label: "Tasks",
-          tension: 0,
-          borderWidth: 2,
-          pointRadius: 3,
-          pointBackgroundColor: "#43A047",
-          pointBorderColor: "transparent",
-          borderColor: "#43A047",
-          backgroundColor: "transparent",
-          fill: true,
-          data: [50, 40, 300, 220, 500, 250, 400, 230, 500],
-          maxBarThickness: 6
-
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: false,
-          }
-        },
-        interaction: {
-          intersect: false,
-          mode: 'index',
-        },
-        scales: {
-          y: {
-            grid: {
-              drawBorder: false,
-              display: true,
-              drawOnChartArea: true,
-              drawTicks: false,
-              borderDash: [4, 4],
-              color: '#e5e5e5'
-            },
-            ticks: {
-              display: true,
-              padding: 10,
-              color: '#737373',
-              font: {
-                size: 14,
-                lineHeight: 2
-              },
-            }
-          },
-          x: {
-            grid: {
-              drawBorder: false,
-              display: false,
-              drawOnChartArea: false,
-              drawTicks: false,
-              borderDash: [4, 4]
-            },
-            ticks: {
-              display: true,
-              color: '#737373',
-              padding: 10,
-              font: {
-                size: 14,
-                lineHeight: 2
-              },
-            }
-          },
-        },
-      },
-    });
-  </script>
-  <script>
-    var win = navigator.platform.indexOf('Win') > -1;
-    if (win && document.querySelector('#sidenav-scrollbar')) {
-      var options = {
-        damping: '0.5'
+        }
       }
-      Scrollbar.init(document.querySelector('#sidenav-scrollbar'), options);
-    }
+    });
   </script>
-  <!-- Github buttons -->
-  <script async defer src="https://buttons.github.io/buttons.js"></script>
-  <!-- Control Center for Material Dashboard: parallax effects, scripts for the example pages etc -->
-  <script src="../assets/js/material-dashboard.min.js?v=3.2.0"></script>
-</body>
 
+</body>
 </html>
