@@ -9,7 +9,8 @@ if (isset($_POST['tambah'])) {
     $id_kelas       = $_POST['id_kelas'] ?: NULL;
     $poin_awal      = (int)$_POST['poin_awal'];
     $poin_sisa      = (int)$_POST['poin_sisa'];
-    $status         = $_POST['status'];
+    // status otomatis
+    $status = 'aktif';
 
     $insert = mysqli_query($conn, "INSERT INTO siswa 
         (nis, password, nama_siswa, jenis_kelamin, tanggal_lahir, id_kelas, poin_awal, poin_sisa, status)

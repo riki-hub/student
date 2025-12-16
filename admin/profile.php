@@ -4,7 +4,7 @@ session_start();
 
 // Cek login
 if (!isset($_SESSION['id_user'])) {
-  header("Location: ../sign-in.php");
+  header("Location: ../index.php");
   exit;
 }
 
@@ -208,8 +208,7 @@ $query = mysqli_query($conn, "SELECT * FROM users ORDER BY id_user DESC");
                               <label class="form-label">Role</label>
                               <select name="role" class="form-select" required>
                                 <option value="admin" ' . ($u['role'] == 'admin' ? 'selected' : '') . '>Admin</option>
-                                <option value="guru" ' . ($u['role'] == 'guru' ? 'selected' : '') . '>Guru</option>
-                                <option value="orangtua" ' . ($u['role'] == 'orangtua' ? 'selected' : '') . '>Orang Tua</option>
+                                <option value="osis" ' . ($u['role'] == 'osis' ? 'selected' : '') . '>Osis</option>
                               </select>
                             </div>
                           </div>

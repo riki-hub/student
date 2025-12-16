@@ -4,7 +4,7 @@ session_start();
 
 // Cek login
 if (!isset($_SESSION['id_user'])) {
-  header("Location: ../sign-in.php");
+  header("Location: ../index.php");
   exit;
 }
 

@@ -4,7 +4,7 @@ session_start();
 
 // Cek login
 if (!isset($_SESSION['id_user'])) {
-  header("Location: ../sign-in.php");
+  header("Location: ../index.php");
   exit;
 }
 
@@ -175,7 +175,6 @@ if (isset($_GET['msg'])) {
                   <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Tgl Lahir</th>
                   <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Kelas</th>
                   <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Poin Sisa</th>
-                  <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Status</th>
                   <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Aksi</th>
                 </tr>
               </thead>
@@ -187,7 +186,7 @@ if (isset($_GET['msg'])) {
                 while ($s = mysqli_fetch_assoc($query)):
                   $jk = $s['jenis_kelamin'] == 'L' ? 'Laki-laki' : 'Perempuan';
                   $tgl_lahir = date('d-m-Y', strtotime($s['tanggal_lahir']));
-                  $status_badge = $s['status'] == 'aktif' ? 'aktif' : 'nonaktif';
+                  $status_badge = $s['status'] == 'aktif' ? 'aktif' : 'keluar';
 
                   // Bangun modal edit
                   $edit_modals .= '
@@ -274,7 +273,6 @@ if (isset($_GET['msg'])) {
                     <td><span class="text-xs"><?= $tgl_lahir ?></span></td>
                     <td><span class="text-xs"><?= htmlspecialchars($s['nama_kelas'] ?? '-') ?></span></td>
                     <td><span class="text-xs font-weight-bold"><?= number_format($s['poin_sisa']) ?></span></td>
-                    <td><span class="badge badge-sm badge-status-<?= $status_badge ?>"><?= ucfirst($s['status']) ?></span></td>
                     <td class="text-center table-actions py-3">
                       <button class="btn btn-warning btn-sm me-2 px-3" data-bs-toggle="modal" data-bs-target="#editSiswa<?= $s['id_siswa'] ?>">Edit</button>
                       <a href="?delete=<?= $s['id_siswa'] ?>&page=<?= $page ?>" 
@@ -358,18 +356,11 @@ if (isset($_GET['msg'])) {
                   </div>
                   <div class="col-md-6 mb-3">
                     <label class="form-label">Poin Awal</label>
-                    <input type="number" name="poin_awal" class="form-control" value="100" min="0" required>
+                    <input type="number" name="poin_awal" class="form-control" value="300" min="0" readonly>
                   </div>
                   <div class="col-md-6 mb-3">
                     <label class="form-label">Poin Sisa</label>
-                    <input type="number" name="poin_sisa" class="form-control" value="100" min="0" required>
-                  </div>
-                  <div class="col-md-6 mb-3">
-                    <label class="form-label">Status</label>
-                    <select name="status" class="form-select" required>
-                      <option value="aktif">Aktif</option>
-                      <option value="nonaktif">Nonaktif</option>
-                    </select>
+                    <input type="number" name="poin_sisa" class="form-control" value="300" min="0" readonly>
                   </div>
                 </div>
               </div>

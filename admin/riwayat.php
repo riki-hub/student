@@ -4,7 +4,7 @@ session_start();
 
 // Cek login
 if (!isset($_SESSION['id_user'])) {
-  header("Location: ../sign-in.php");
+  header("Location: ../index.php");
   exit;
 }
 
@@ -228,7 +228,7 @@ if (isset($_GET['msg'])) {
                   $tgl = date('d/m/Y', strtotime($p['tanggal']));
                   $bukti_display = '-';
                   if (!empty($p['bukti'])) {
-                    $bukti_display = "<img src='../uploads/bukti/{$p['bukti']}' class='bukti-preview' 
+                    $bukti_display = "<img src='../uploads/{$p['bukti']}' class='bukti-preview' 
                                        onclick=\"window.open(this.src, '_blank')\" 
                                        title='Klik untuk memperbesar'>";
                   }
@@ -328,8 +328,8 @@ if (isset($_GET['msg'])) {
                       <span class="text-xxs text-muted"><?= htmlspecialchars($p['nis'] ?? '-') ?></span>
                     </td>
                     <td><p class="text-xs mb-0"><?= htmlspecialchars($p['nama_pelanggaran'] ?? '-') ?></p></td>
-                    <td><span class="badge badge-danger poin-badge">-<?= $p['poin_berkurang'] ?></span></td>
-                    <td><span class="text-xs"><?= htmlspecialchars($p['nama_user'] ?? '-') ?></span></td>
+                    <td><span class="text-xs font-weight-bold mb-0">-<?= $p['poin_berkurang'] ?></span></td>
+                    <td><span class="text-xs"><?= htmlspecialchars($p['nama_lengkap'] ?? '-') ?></span></td>
                     <td><?= $bukti_display ?></td>
                     <td class="text-center table-actions py-3">
                       <button class="btn btn-warning btn-sm me-2 px-3" data-bs-toggle="modal" data-bs-target="#editPelanggaran<?= $p['id_pelanggaran'] ?>">Edit</button>
