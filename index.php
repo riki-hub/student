@@ -7,40 +7,47 @@ $error = '';
 
 // Cek apakah form disubmit
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Ambil dan bersihkan input
-    $username = trim($_POST['username'] ?? '');
-    $password = $_POST['password'] ?? '';
+  // Ambil dan bersihkan input
+  $username = trim($_POST['username'] ?? '');
+  $password = $_POST['password'] ?? '';
 
-    if ($username !== '' && $password !== '') {
-        // Gunakan prepared statement untuk keamanan (mencegah SQL Injection)
-        $stmt = $conn->prepare("SELECT * FROM users WHERE username = ?");
-        $stmt->bind_param("s", $username);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $data = $result->fetch_assoc();
+  if ($username !== '' && $password !== '') {
+    // Gunakan prepared statement untuk keamanan (mencegah SQL Injection)
+    $stmt = $conn->prepare("SELECT * FROM users WHERE username = ?");
+    $stmt->bind_param("s", $username);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $data = $result->fetch_assoc();
 
-        if ($data) {
-            if (($password == $data['password'])) {
-                // Login berhasil
-                $_SESSION['id_user'] = $data['id_user'];
-                $_SESSION['username'] = $data['username'];
-                header("Location: admin/dashboard.php");
-                exit;
-            } else {
-                $error = "Password salah!";
-            }
-        } else {
-            $error = "Username tidak ditemukan!";
+    if ($data) {
+      if (($password == $data['password'])) {
+        // Login berhasil
+        $_SESSION['id_user'] = $data['id_user'];
+        $_SESSION['username'] = $data['username'];
+        $_SESSION['nama'] = $data['nama_lengkap'];
+        $_SESSION['role'] = $data['role'];
+        if ($data['role'] != 'admin') {
+          header("Location: petugas/index.php");
+          exit;
         }
-        $stmt->close();
+        header("Location: admin/dashboard.php");
+        exit;
+      } else {
+        $error = "Password salah!";
+      }
     } else {
-        $error = "Username dan password harus diisi!";
+      $error = "Username tidak ditemukan!";
     }
+    $stmt->close();
+  } else {
+    $error = "Username dan password harus diisi!";
+  }
 }
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -113,4 +120,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <script src="assets/js/plugins/smooth-scrollbar.min.js"></script>
   <script src="assets/js/material-dashboard.min.js?v=3.2.0"></script>
 </body>
+
 </html>
