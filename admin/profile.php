@@ -4,41 +4,41 @@ session_start();
 
 // Cek login
 if (!isset($_SESSION['id_user'])) {
-    header("Location: ../sign-in.php");
-    exit;
+  header("Location: ../sign-in.php");
+  exit;
 }
 
 // Proses hapus (lebih aman)
 if (isset($_GET['delete'])) {
-    $id = (int)$_GET['delete'];
-    // Hindari hapus user sendiri atau user terakhir (opsional, bisa dihapus jika tidak perlu)
-    $current_id = $_SESSION['id_user'];
-    if ($id == $current_id) {
-        header("Location: profile.php?msg=error_self");
-        exit;
-    }
-    mysqli_query($conn, "DELETE FROM users WHERE id_user = $id");
-    header("Location: profile.php?msg=deleted");
+  $id = (int)$_GET['delete'];
+  // Hindari hapus user sendiri atau user terakhir (opsional, bisa dihapus jika tidak perlu)
+  $current_id = $_SESSION['id_user'];
+  if ($id == $current_id) {
+    header("Location: profile.php?msg=error_self");
     exit;
+  }
+  mysqli_query($conn, "DELETE FROM users WHERE id_user = $id");
+  header("Location: profile.php?msg=deleted");
+  exit;
 }
 
 // Pesan feedback
 $alert = '';
 if (isset($_GET['msg'])) {
-    $messages = [
-        'added'   => 'User berhasil ditambahkan!',
-        'updated' => 'User berhasil diupdate!',
-        'deleted' => 'User berhasil dihapus!',
-        'error_self' => 'Tidak dapat menghapus akun sendiri!'
-    ];
-    $type = $_GET['msg'];
-    $alertClass = ($type === 'error_self') ? 'danger' : 'success';
-    if (isset($messages[$type])) {
-        $alert = "<div class='alert alert-$alertClass alert-dismissible fade show' role='alert'>
+  $messages = [
+    'added'   => 'User berhasil ditambahkan!',
+    'updated' => 'User berhasil diupdate!',
+    'deleted' => 'User berhasil dihapus!',
+    'error_self' => 'Tidak dapat menghapus akun sendiri!'
+  ];
+  $type = $_GET['msg'];
+  $alertClass = ($type === 'error_self') ? 'danger' : 'success';
+  if (isset($messages[$type])) {
+    $alert = "<div class='alert alert-$alertClass alert-dismissible fade show' role='alert'>
                         {$messages[$type]}
                         <button type='button' class='btn-close' data-bs-dismiss='alert'></button>
                       </div>";
-    }
+  }
 }
 
 // Ambil semua data user
@@ -47,6 +47,7 @@ $query = mysqli_query($conn, "SELECT * FROM users ORDER BY id_user DESC");
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -62,7 +63,7 @@ $query = mysqli_query($conn, "SELECT * FROM users ORDER BY id_user DESC");
   <!-- Material Dashboard CSS -->
   <link href="../assets/css/material-dashboard.css?v=3.2.0" rel="stylesheet" />
 
- <style>
+  <style>
     /* Tombol aksi di tabel */
     .table-actions .btn {
       padding: 0.35rem 1rem;
@@ -173,24 +174,24 @@ $query = mysqli_query($conn, "SELECT * FROM users ORDER BY id_user DESC");
 
                 while ($u = mysqli_fetch_assoc($query)):
                   // Tentukan warna badge berdasarkan role
-                  $badge_color = $u['role'] == 'admin' ? 'danger' : ($u['role'] == 'guru' ? 'info' : 'secondary');
+                  $badge_color = $u['role'] == 'admin' ? 'danger' : ($u['role'] == 'osis' ? 'info' : 'secondary');
 
                   // Bangun modal edit
                   $edit_modals .= '
-                  <div class="modal fade" id="editUser'. $u['id_user'] .'" tabindex="-1" aria-hidden="true">
+                  <div class="modal fade" id="editUser' . $u['id_user'] . '" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog">
                       <form method="POST" action="proses/edit.php">
                         <div class="modal-content">
                           <div class="modal-header">
-                            <h5 class="modal-title">Edit User - '. htmlspecialchars($u['username']) .'</h5>
+                            <h5 class="modal-title">Edit User - ' . htmlspecialchars($u['username']) . '</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                           </div>
                           <div class="modal-body">
-                            <input type="hidden" name="id_user" value="'. $u['id_user'] .'">
+                            <input type="hidden" name="id_user" value="' . $u['id_user'] . '">
                             
                             <div class="mb-3">
                               <label class="form-label">Username</label>
-                              <input type="text" name="username" class="form-control" value="'. htmlspecialchars($u['username']) .'" required>
+                              <input type="text" name="username" class="form-control" value="' . htmlspecialchars($u['username']) . '" required>
                             </div>
                             
                             <div class="mb-3">
@@ -200,15 +201,15 @@ $query = mysqli_query($conn, "SELECT * FROM users ORDER BY id_user DESC");
                             
                             <div class="mb-3">
                               <label class="form-label">Nama Lengkap</label>
-                              <input type="text" name="nama_lengkap" class="form-control" value="'. htmlspecialchars($u['nama_lengkap']) .'" required>
+                              <input type="text" name="nama_lengkap" class="form-control" value="' . htmlspecialchars($u['nama_lengkap']) . '" required>
                             </div>
                             
                             <div class="mb-3">
                               <label class="form-label">Role</label>
                               <select name="role" class="form-select" required>
-                                <option value="admin" '. ($u['role'] == 'admin' ? 'selected' : '') .'>Admin</option>
-                                <option value="guru" '. ($u['role'] == 'guru' ? 'selected' : '') .'>Guru</option>
-                                <option value="orangtua" '. ($u['role'] == 'orangtua' ? 'selected' : '') .'>Orang Tua</option>
+                                <option value="admin" ' . ($u['role'] == 'admin' ? 'selected' : '') . '>Admin</option>
+                                <option value="guru" ' . ($u['role'] == 'guru' ? 'selected' : '') . '>Guru</option>
+                                <option value="orangtua" ' . ($u['role'] == 'orangtua' ? 'selected' : '') . '>Orang Tua</option>
                               </select>
                             </div>
                           </div>
@@ -225,22 +226,26 @@ $query = mysqli_query($conn, "SELECT * FROM users ORDER BY id_user DESC");
                 ?>
                   <tr>
                     <td class="ps-4"><span class="text-secondary text-xs"><?= $no++ ?></span></td>
-                    <td><p class="text-xs font-weight-bold mb-0"><?= htmlspecialchars($u['username']) ?></p></td>
-                    <td><p class="text-xs font-weight-bold mb-0"><?= htmlspecialchars($u['nama_lengkap']) ?></p></td>
+                    <td>
+                      <p class="text-xs font-weight-bold mb-0"><?= htmlspecialchars($u['username']) ?></p>
+                    </td>
+                    <td>
+                      <p class="text-xs font-weight-bold mb-0"><?= htmlspecialchars($u['nama_lengkap']) ?></p>
+                    </td>
                     <td>
                       <span class="badge badge-sm bg-gradient-<?= $badge_color ?>">
                         <?= ucfirst($u['role']) ?>
                       </span>
                     </td>
                     <td class="text-center table-actions py-3">
-                      <button class="btn btn-warning btn-sm me-2 px-4" 
-                              data-bs-toggle="modal" 
-                              data-bs-target="#editUser<?= $u['id_user'] ?>">
+                      <button class="btn btn-warning btn-sm me-2 px-4"
+                        data-bs-toggle="modal"
+                        data-bs-target="#editUser<?= $u['id_user'] ?>">
                         Edit
                       </button>
-                      <a href="?delete=<?= $u['id_user'] ?>" 
-                         onclick="return confirm('Yakin ingin menghapus user <?= htmlspecialchars($u['username']) ?>?')"
-                         class="btn btn-danger btn-sm px-4">
+                      <a href="?delete=<?= $u['id_user'] ?>"
+                        onclick="return confirm('Yakin ingin menghapus user <?= htmlspecialchars($u['username']) ?>?')"
+                        class="btn btn-danger btn-sm px-4">
                         Hapus
                       </a>
                     </td>
@@ -282,8 +287,8 @@ $query = mysqli_query($conn, "SELECT * FROM users ORDER BY id_user DESC");
                   <select name="role" id="role" class="form-select" required>
                     <option value="">-- Pilih Role --</option>
                     <option value="admin">Admin</option>
-                    <option value="guru">Guru</option>
-                    <option value="orangtua">Orang Tua</option>
+                    <option value="osis">Osis</option>
+
                   </select>
                 </div>
               </div>
@@ -306,4 +311,5 @@ $query = mysqli_query($conn, "SELECT * FROM users ORDER BY id_user DESC");
   <script src="../assets/js/plugins/perfect-scrollbar.min.js"></script>
   <script src="../assets/js/material-dashboard.min.js?v=3.2.0"></script>
 </body>
+
 </html>
