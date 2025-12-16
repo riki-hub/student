@@ -105,6 +105,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <button type="submit" class="btn bg-gradient-dark w-100 my-4 mb-2">Sign in</button>
                   </div>
                 </form>
+                <div class="text-center mt-3">
+                  <span class="text-secondary text-sm">Login sebagai siswa?</span>
+                  <a href="siswa/login.php" class="text-dark text-sm font-weight-bold ms-1">Buka portal siswa</a>
+                </div>
               </div>
             </div>
           </div>
