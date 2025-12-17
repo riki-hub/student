@@ -204,7 +204,8 @@ $query = mysqli_query($conn, "SELECT * FROM users ORDER BY id_user DESC");
                               <input type="text" name="nama_lengkap" class="form-control" value="' . htmlspecialchars($u['nama_lengkap']) . '" required>
                             </div>
                             
-                            <div class="mb-3">
+                            <div class
+                            ="mb-3">
                               <label class="form-label">Role</label>
                               <select name="role" class="form-select" required>
                                 <option value="admin" ' . ($u['role'] == 'admin' ? 'selected' : '') . '>Admin</option>

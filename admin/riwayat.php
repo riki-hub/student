@@ -10,24 +10,45 @@ if (!isset($_SESSION['id_user'])) {
 
 // Proses hapus
 if (isset($_GET['delete'])) {
-  $id = (int)$_GET['delete'];
-  
-  // Ambil data pelanggaran untuk mengembalikan poin
-  $get_pelang = mysqli_query($conn, "SELECT id_siswa, poin_berkurang FROM pelanggaran WHERE id_pelanggaran = $id");
-  $pelang = mysqli_fetch_assoc($get_pelang);
-  
-  if ($pelang) {
-    // Kembalikan poin ke siswa
-    mysqli_query($conn, "UPDATE siswa SET poin_sisa = poin_sisa + {$pelang['poin_berkurang']} WHERE id_siswa = {$pelang['id_siswa']}");
-    
-    // Hapus pelanggaran
-    $hapus = mysqli_query($conn, "DELETE FROM pelanggaran WHERE id_pelanggaran = $id");
-    $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-    header("Location: pelanggaran.php?page=$page&msg=" . ($hapus ? 'deleted' : 'error'));
-  } else {
-    header("Location: pelanggaran.php?msg=error");
-  }
-  exit;
+    $id = (int)$_GET['delete'];
+
+    // Ambil data pelanggaran
+    $get_pelang = mysqli_query($conn, "
+        SELECT id_siswa, poin_berkurang 
+        FROM pelanggaran 
+        WHERE id_pelanggaran = $id
+    ");
+    $pelang = mysqli_fetch_assoc($get_pelang);
+
+    if ($pelang) {
+
+        // Kembalikan poin ke siswa
+        mysqli_query($conn, "
+            UPDATE siswa 
+            SET poin_sisa = poin_sisa + {$pelang['poin_berkurang']} 
+            WHERE id_siswa = {$pelang['id_siswa']}
+        ");
+
+        // 🔴 HAPUS DATA TERKAIT DULU (CHILD)
+        mysqli_query($conn, "
+            DELETE FROM riwayat_poin 
+            WHERE id_pelanggaran = $id
+        ");
+
+        // 🟢 BARU HAPUS DATA PELANGGARAN (PARENT)
+        $hapus = mysqli_query($conn, "
+            DELETE FROM pelanggaran 
+            WHERE id_pelanggaran = $id
+        ");
+
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        header("Location: riwayat.php?page=$page&msg=" . ($hapus ? 'deleted' : 'error'));
+
+    } else {
+        header("Location: riwayat.php?msg=error");
+    }
+
+    exit;
 }
 
 // Pagination

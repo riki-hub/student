@@ -264,7 +264,7 @@ if (mysqli_num_rows($result_grafik) > 0) {
             <div class="card-header p-2 ps-3">
               <div class="d-flex justify-content-between">
                 <div>
-                  <p class="text-sm mb-0 text-capitalize">Total Guru/Staff</p>
+                  <p class="text-sm mb-0 text-capitalize">Total Osis</p>
                   <h4 class="mb-0"><?= number_format($total_guru) ?></h4>
                 </div>
                 <div class="icon icon-md icon-shape bg-gradient-success shadow-success shadow text-center border-radius-lg">
@@ -275,7 +275,7 @@ if (mysqli_num_rows($result_grafik) > 0) {
             <hr class="dark horizontal my-0">
             <div class="card-footer p-2 ps-3">
               <p class="mb-0 text-sm">
-                <span class="text-secondary font-weight-bolder">Guru & staff </span>
+                <span class="text-secondary font-weight-bolder">Osis </span>
                 terdaftar
               </p>
             </div>
