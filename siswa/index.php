@@ -619,7 +619,6 @@ $totalPelanggaran = count($pelanggaran);
                           </td>
                           <td>
                             <div class="violation-name"><?= htmlspecialchars($row['nama_pelanggaran'] ?? 'Pelanggaran') ?></div>
-                            <div class="violation-id">ID: <?= (int)$row['id_pelanggaran'] ?></div>
                           </td>
                           <td class="text-center">
                             <span class="badge-poin">
