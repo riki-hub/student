@@ -25,6 +25,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
 
+
 try {
     $spreadsheet = IOFactory::load($file);
     $sheet = $spreadsheet->getActiveSheet();
@@ -57,7 +58,7 @@ try {
         $password_plain = trim($row[5]);
 
         // Validasi wajib
-        if (!$nis || !$nama || !$password_plain) {
+        if (!$nis || !$nama) {
             $errors++;
             $error_details[] = "Baris $row_number: NIS/Nama/Password kosong";
             continue;
@@ -92,6 +93,8 @@ try {
         // Hash password
         $password = ($password_plain);
 
+        $passwordDefault = "12345";
+
         // Default
         $poin_awal = 300;
         $poin_sisa = 300;
@@ -122,7 +125,7 @@ try {
             $poin_awal,
             $poin_sisa,
             $status,
-            $password
+            $passwordDefault
         );
 
         if (mysqli_stmt_execute($stmt)) {
@@ -137,7 +140,6 @@ try {
     $_SESSION['import_error_details'] = $error_details;
     header("Location: ../siswa.php?msg=imported&success=$success&errors=$errors");
     exit;
-
 } catch (Exception $e) {
     $_SESSION['import_error_details'] = [$e->getMessage()];
     header("Location: ../siswa.php?msg=import_error");

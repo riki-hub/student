@@ -81,6 +81,7 @@ if (isset($_GET['msg'])) {
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -94,22 +95,64 @@ if (isset($_GET['msg'])) {
   <link href="../assets/css/material-dashboard.css?v=3.2.0" rel="stylesheet" />
 
   <style>
-    .table-actions .btn { padding: 0.35rem 1rem; font-size: 0.875rem; min-width: 80px; }
-    .poin-badge { font-weight: bold; font-size: 1.1em; padding: 0.5em 1em; }
+    .table-actions .btn {
+      padding: 0.35rem 1rem;
+      font-size: 0.875rem;
+      min-width: 80px;
+    }
 
-    body.modal-open { overflow: hidden; }
-    body.modal-open .sidenav { filter: brightness(0.5); transition: filter 0.3s ease; pointer-events: none; }
-    body.modal-open .main-content nav { filter: brightness(0.65); }
-    body.modal-open .card, body.modal-open .table-responsive { filter: brightness(0.85); }
-    .modal-backdrop.show { opacity: 0.75 !important; }
+    .poin-badge {
+      font-weight: bold;
+      font-size: 1.1em;
+      padding: 0.5em 1em;
+    }
+
+    body.modal-open {
+      overflow: hidden;
+    }
+
+    body.modal-open .sidenav {
+      filter: brightness(0.5);
+      transition: filter 0.3s ease;
+      pointer-events: none;
+    }
+
+    body.modal-open .main-content nav {
+      filter: brightness(0.65);
+    }
+
+    body.modal-open .card,
+    body.modal-open .table-responsive {
+      filter: brightness(0.85);
+    }
+
+    .modal-backdrop.show {
+      opacity: 0.75 !important;
+    }
 
     .modal .form-control {
-      background-color: #ffffff; border: 2px solid #d1d5db; border-radius: 8px;
-      padding: 10px 14px; font-size: 14px; color: #344767; transition: all 0.2s ease;
+      background-color: #ffffff;
+      border: 2px solid #d1d5db;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 14px;
+      color: #344767;
+      transition: all 0.2s ease;
     }
-    .modal .form-control:hover { border-color: #5e72e4; }
-    .modal .form-control:focus { border-color: #5e72e4; box-shadow: 0 0 0 3px rgba(94, 114, 228, 0.15); outline: none; }
-    .modal .form-control::placeholder { color: #9ca3af; }
+
+    .modal .form-control:hover {
+      border-color: #5e72e4;
+    }
+
+    .modal .form-control:focus {
+      border-color: #5e72e4;
+      box-shadow: 0 0 0 3px rgba(94, 114, 228, 0.15);
+      outline: none;
+    }
+
+    .modal .form-control::placeholder {
+      color: #9ca3af;
+    }
   </style>
 </head>
 
@@ -169,43 +212,43 @@ if (isset($_GET['msg'])) {
 
                   // Modal Edit (sama seperti sebelumnya)
                   $edit_modals .= '
-                  <div class="modal fade" id="editSiswa'. $s['id_siswa'] .'" tabindex="-1" aria-hidden="true">
+                  <div class="modal fade" id="editSiswa' . $s['id_siswa'] . '" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog modal-lg">
                       <form method="POST" action="proses/edit_siswa.php">
                         <div class="modal-content">
                           <div class="modal-header">
-                            <h5 class="modal-title">Edit Siswa - '. htmlspecialchars($s['nama_siswa']) .'</h5>
+                            <h5 class="modal-title">Edit Siswa - ' . htmlspecialchars($s['nama_siswa']) . '</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                           </div>
                           <div class="modal-body">
-                            <input type="hidden" name="id_siswa" value="'. $s['id_siswa'] .'">
-                            <input type="hidden" name="page" value="'. $page .'">
+                            <input type="hidden" name="id_siswa" value="' . $s['id_siswa'] . '">
+                            <input type="hidden" name="page" value="' . $page . '">
                             <div class="row">
-                              <div class="col-md-6 mb-3"><label class="form-label">NIS</label><input type="text" name="nis" class="form-control" value="'. htmlspecialchars($s['nis']) .'" required></div>
-                              <div class="col-md-6 mb-3"><label class="form-label">Nama Siswa</label><input type="text" name="nama_siswa" class="form-control" value="'. htmlspecialchars($s['nama_siswa']) .'" required></div>
+                              <div class="col-md-6 mb-3"><label class="form-label">NIS</label><input type="text" name="nis" class="form-control" value="' . htmlspecialchars($s['nis']) . '" required></div>
+                              <div class="col-md-6 mb-3"><label class="form-label">Nama Siswa</label><input type="text" name="nama_siswa" class="form-control" value="' . htmlspecialchars($s['nama_siswa']) . '" required></div>
                               <div class="col-md-6 mb-3"><label class="form-label">Jenis Kelamin</label>
                                 <select name="jenis_kelamin" class="form-select" required>
-                                  <option value="L" '. ($s['jenis_kelamin'] == 'L' ? 'selected' : '') .'>Laki-laki</option>
-                                  <option value="P" '. ($s['jenis_kelamin'] == 'P' ? 'selected' : '') .'>Perempuan</option>
+                                  <option value="L" ' . ($s['jenis_kelamin'] == 'L' ? 'selected' : '') . '>Laki-laki</option>
+                                  <option value="P" ' . ($s['jenis_kelamin'] == 'P' ? 'selected' : '') . '>Perempuan</option>
                                 </select>
                               </div>
-                              <div class="col-md-6 mb-3"><label class="form-label">Tanggal Lahir</label><input type="date" name="tanggal_lahir" class="form-control" value="'. $s['tanggal_lahir'] .'" required></div>
+                              <div class="col-md-6 mb-3"><label class="form-label">Tanggal Lahir</label><input type="date" name="tanggal_lahir" class="form-control" value="' . $s['tanggal_lahir'] . '" required></div>
                               <div class="col-md-6 mb-3"><label class="form-label">Kelas</label>
                                 <select name="id_kelas" class="form-select">
                                   <option value="">-- Tanpa Kelas --</option>';
-                                  foreach ($all_kelas as $k) {
-                                    $selected = ($s['id_kelas'] == $k['id_kelas']) ? 'selected' : '';
-                                    $edit_modals .= '<option value="'. $k['id_kelas'] .'" '. $selected .'>'. htmlspecialchars($k['nama_kelas']) .'</option>';
-                                  }
+                  foreach ($all_kelas as $k) {
+                    $selected = ($s['id_kelas'] == $k['id_kelas']) ? 'selected' : '';
+                    $edit_modals .= '<option value="' . $k['id_kelas'] . '" ' . $selected . '>' . htmlspecialchars($k['nama_kelas']) . '</option>';
+                  }
                   $edit_modals .= '
                                 </select>
                               </div>
-                              <div class="col-md-6 mb-3"><label class="form-label">Poin Awal</label><input type="number" name="poin_awal" class="form-control" value="'. $s['poin_awal'] .'" min="0" required></div>
-                              <div class="col-md-6 mb-3"><label class="form-label">Poin Sisa</label><input type="number" name="poin_sisa" class="form-control" value="'. $s['poin_sisa'] .'" min="0" required></div>
+                              <div class="col-md-6 mb-3"><label class="form-label">Poin Awal</label><input type="number" name="poin_awal" class="form-control" value="' . $s['poin_awal'] . '" min="0" required></div>
+                              <div class="col-md-6 mb-3"><label class="form-label">Poin Sisa</label><input type="number" name="poin_sisa" class="form-control" value="' . $s['poin_sisa'] . '" min="0" required></div>
                               <div class="col-md-6 mb-3"><label class="form-label">Status</label>
                                 <select name="status" class="form-select" required>
-                                  <option value="aktif" '. ($s['status'] == 'aktif' ? 'selected' : '') .'>Aktif</option>
-                                  <option value="nonaktif" '. ($s['status'] == 'nonaktif' ? 'selected' : '') .'>Nonaktif</option>
+                                  <option value="aktif" ' . ($s['status'] == 'aktif' ? 'selected' : '') . '>Aktif</option>
+                                  <option value="nonaktif" ' . ($s['status'] == 'nonaktif' ? 'selected' : '') . '>Nonaktif</option>
                                 </select>
                               </div>
                               <div class="col-md-6 mb-3"><label class="form-label">Password Baru <small class="text-muted">(Kosongkan jika tidak ubah)</small></label>
@@ -224,8 +267,12 @@ if (isset($_GET['msg'])) {
                 ?>
                   <tr>
                     <td class="ps-4"><span class="text-secondary text-xs"><?= $no++ ?></span></td>
-                    <td><p class="text-xs font-weight-bold mb-0"><?= htmlspecialchars($s['nis']) ?></p></td>
-                    <td><p class="text-xs font-weight-bold mb-0"><?= htmlspecialchars($s['nama_siswa']) ?></p></td>
+                    <td>
+                      <p class="text-xs font-weight-bold mb-0"><?= htmlspecialchars($s['nis']) ?></p>
+                    </td>
+                    <td>
+                      <p class="text-xs font-weight-bold mb-0"><?= htmlspecialchars($s['nama_siswa']) ?></p>
+                    </td>
                     <td><span class="text-xs"><?= $jk ?></span></td>
                     <td><span class="text-xs"><?= $tgl_lahir ?></span></td>
                     <td><span class="text-xs"><?= htmlspecialchars($s['nama_kelas'] ?? '-') ?></span></td>
@@ -300,4 +347,5 @@ if (isset($_GET['msg'])) {
   <script src="../assets/js/plugins/perfect-scrollbar.min.js"></script>
   <script src="../assets/js/material-dashboard.min.js?v=3.2.0"></script>
 </body>
+
 </html>
